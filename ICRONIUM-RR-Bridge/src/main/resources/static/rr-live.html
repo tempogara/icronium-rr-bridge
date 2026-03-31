@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RR Live Sync</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f6f7f9;
+      padding-bottom: 220px;
+    }
+    body.messages-collapsed {
+      padding-bottom: 56px;
+    }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .mini-btn { min-width: 42px; }
+    .toolbar-box {
+      background: #ececee;
+      border: 1px solid #d2d2d2;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .toolbar-row {
+      border-bottom: 1px solid #d4d4d4;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+    .rrid-label {
+      display: inline-block;
+      background: #0d6efd;
+      color: #ffffff;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-weight: 600;
+      min-width: 120px;
+      text-align: center;
+    }
+    .toolbar-input {
+      max-width: 150px;
+    }
+    .btn-bordeaux {
+      background-color: #d20610;
+      border-color: #b7050e;
+      color: #ffffff;
+    }
+    .btn-bordeaux:hover {
+      background-color: #b7050e;
+      border-color: #99040c;
+      color: #ffffff;
+    }
+    .messages-panel {
+      max-height: 180px;
+      transition: transform 0.2s ease;
+    }
+    .messages-panel.is-collapsed {
+      transform: translateY(calc(100% - 46px));
+    }
+    .messages-log {
+      height: 120px;
+      overflow: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background: #f8f9fa;
+    }
+    .messages-toggle {
+      min-width: 38px;
+      font-weight: 700;
+      line-height: 1;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg bg-white border-bottom mb-3">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0">
+        <img src="/images/icronium.png" alt="Icronium" style="max-height: 42px;">
+      </span>
+      <div class="d-flex align-items-center gap-2">
+        <button id="openRrBtn" class="btn btn-bordeaux btn-sm d-inline-flex align-items-center gap-2" type="button">
+          <img src="/images/open-rr.png" alt="" style="width:18px;height:18px;border-radius:3px;">
+          <span>Open RR</span>
+        </button>
+        <button id="toDashboardBtn" class="btn btn-sm btn-outline-primary" type="button">Dashboard</button>
+        <button id="toDetailBtn" class="btn btn-sm btn-outline-primary" type="button">Race detail</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container-fluid py-2">
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-8">
+        <div id="eventNameText" class="fw-bold fs-5"></div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div id="eventDateText" class="fw-bold fs-5"></div>
+      </div>
+    </div>
+
+    <div class="toolbar-box mb-3">
+      <div class="d-flex flex-wrap align-items-center gap-2 toolbar-row">
+        <span class="mb-0 fw-semibold">RR ID:</span>
+        <span id="rrIdLabel" class="rrid-label"></span>
+        <span class="mb-0 fw-semibold">Poll:</span>
+        <input id="pollSecInput" class="form-control form-control-sm toolbar-input" type="number" min="1" value="5" placeholder="Poll (sec)">
+        <button id="syncBtn" class="btn btn-outline-secondary btn-sm" type="button">SYNC</button>
+        <button id="refreshBtn" class="btn btn-outline-secondary btn-sm" type="button">Refresh</button>
+        <button id="openIcronLiveBtn" class="btn btn-outline-success btn-sm" type="button">Open Icron Live</button>
+        <span id="lastSync" class="text-muted small ms-auto"></span>
+      </div>
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <span class="text-muted small">Global Actions:</span>
+          <button id="globalPlayBtn" class="btn btn-sm btn-outline-success" type="button">PLAY</button>
+          <button id="globalStopBtn" class="btn btn-sm btn-outline-secondary" type="button">STOP</button>
+          <button id="globalResetBtn" class="btn btn-sm btn-outline-warning" type="button">RESET</button>
+          <button id="globalDeleteBtn" class="btn btn-sm btn-outline-danger" type="button">DELETE</button>
+        </div>
+        <span id="runningBadge" class="badge text-bg-secondary">Rows running: 0</span>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover mb-0 align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Actions</th>
+                <th>Name</th>
+                <th>URL</th>
+                <th>Status</th>
+                <th>Last update</th>
+                <th>Bytes</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody id="rowsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+  <section id="messagesPanel" class="messages-panel fixed-bottom bg-white border-top shadow-sm">
+    <div class="container-fluid py-2">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex align-items-center gap-2">
+          <strong>Messages</strong>
+          <button id="clearMessagesBtn" type="button" class="btn btn-sm btn-outline-secondary">Clear</button>
+        </div>
+        <button id="messagesToggleBtn" type="button" class="btn btn-sm btn-outline-secondary messages-toggle" aria-label="Collapse messages">▼</button>
+      </div>
+      <div id="messagesLog" class="messages-log border rounded p-2 small"></div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+  <script>
+    const STORAGE_KEYS = {
+      auth: 'rr.auth',
+      selectedGara: 'rr.selectedGara',
+      rrLiveEventId: 'rr.live.eventId'
+    };
+
+    const pollSecInput = document.getElementById('pollSecInput');
+    const rrIdLabel = document.getElementById('rrIdLabel');
+    const syncBtn = document.getElementById('syncBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const openRrBtn = document.getElementById('openRrBtn');
+    const eventNameText = document.getElementById('eventNameText');
+    const eventDateText = document.getElementById('eventDateText');
+    const rowsBody = document.getElementById('rowsBody');
+    const runningBadge = document.getElementById('runningBadge');
+    const lastSync = document.getElementById('lastSync');
+    const toDashboardBtn = document.getElementById('toDashboardBtn');
+    const toDetailBtn = document.getElementById('toDetailBtn');
+    const openIcronLiveBtn = document.getElementById('openIcronLiveBtn');
+    const globalPlayBtn = document.getElementById('globalPlayBtn');
+    const globalStopBtn = document.getElementById('globalStopBtn');
+    const globalResetBtn = document.getElementById('globalResetBtn');
+    const globalDeleteBtn = document.getElementById('globalDeleteBtn');
+    const clearMessagesBtn = document.getElementById('clearMessagesBtn');
+    const messagesPanel = document.getElementById('messagesPanel');
+    const messagesToggleBtn = document.getElementById('messagesToggleBtn');
+    const messagesLog = document.getElementById('messagesLog');
+
+    let wsClient = null;
+    let keepAliveTimerId = null;
+
+    function appendMessage(sender, content) {
+      const line = document.createElement('div');
+      const ts = new Date().toLocaleTimeString();
+      line.textContent = `${ts} - ${sender || 'rr-live'}: ${content || ''}`;
+      messagesLog.appendChild(line);
+      messagesLog.scrollTop = messagesLog.scrollHeight;
+    }
+
+    function setMessagesCollapsed(collapsed) {
+      const isCollapsed = !!collapsed;
+      messagesPanel.classList.toggle('is-collapsed', isCollapsed);
+      document.body.classList.toggle('messages-collapsed', isCollapsed);
+      messagesToggleBtn.textContent = isCollapsed ? '▲' : '▼';
+      messagesToggleBtn.setAttribute('aria-label', isCollapsed ? 'Expand messages' : 'Collapse messages');
+      localStorage.setItem('rr.live.messagesCollapsed', isCollapsed ? '1' : '0');
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function requireLogin() {
+      const raw = localStorage.getItem(STORAGE_KEYS.auth);
+      if (!raw) {
+        window.location.href = '/index.html';
+        return false;
+      }
+      return true;
+    }
+
+    function redirectToLogin() {
+      localStorage.removeItem(STORAGE_KEYS.auth);
+      window.location.href = '/index.html';
+    }
+
+    async function keepSessionAlive(silent) {
+      const response = await fetch('/api/auth/keepalive');
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Keepalive failed');
+      }
+      if (!silent) {
+        appendMessage('ui', 'Session keepalive OK');
+      }
+      return response.json();
+    }
+
+    function startKeepAlive() {
+      if (keepAliveTimerId) {
+        window.clearInterval(keepAliveTimerId);
+      }
+      keepAliveTimerId = window.setInterval(async () => {
+        try {
+          await keepSessionAlive(true);
+        } catch (error) {
+          appendMessage('ui', error.message);
+        }
+      }, 5 * 60 * 1000);
+    }
+
+    async function loadEventMeta() {
+      const eventId = currentEventId();
+      if (!eventId) {
+        eventNameText.textContent = '';
+        eventDateText.textContent = '';
+        return;
+      }
+
+      const raw = sessionStorage.getItem(STORAGE_KEYS.selectedGara);
+      if (raw) {
+        try {
+          const gara = JSON.parse(raw);
+          if (gara && gara.id === eventId) {
+            eventNameText.textContent = gara.eventName || '';
+            eventDateText.textContent = gara.eventDate || '';
+            return;
+          }
+        } catch (_error) {
+        }
+      }
+
+      try {
+        await keepSessionAlive(true);
+        const response = await fetch('/api/gare');
+        if (!response.ok) {
+          throw new Error('Unable to load event metadata');
+        }
+        const gare = await response.json();
+        const gara = (gare || []).find((g) => (g.id || '') === eventId);
+        eventNameText.textContent = gara && gara.eventName ? gara.eventName : '';
+        eventDateText.textContent = gara && gara.eventDate ? gara.eventDate : '';
+      } catch (_error) {
+        eventNameText.textContent = '';
+        eventDateText.textContent = '';
+      }
+    }
+
+    function currentEventId() {
+      const fromLabel = (rrIdLabel.textContent || '').trim();
+      if (fromLabel) {
+        return fromLabel;
+      }
+      const params = new URLSearchParams(window.location.search);
+      const byQuery = params.get('eventId');
+      if (byQuery) {
+        return byQuery;
+      }
+      const raw = sessionStorage.getItem(STORAGE_KEYS.selectedGara);
+      if (!raw) {
+        return sessionStorage.getItem(STORAGE_KEYS.rrLiveEventId) || '';
+      }
+      try {
+        const gara = JSON.parse(raw);
+        if (gara && gara.id) {
+          return gara.id;
+        }
+        return sessionStorage.getItem(STORAGE_KEYS.rrLiveEventId) || '';
+      } catch (_error) {
+        return sessionStorage.getItem(STORAGE_KEYS.rrLiveEventId) || '';
+      }
+    }
+
+    async function syncState() {
+      const eventId = currentEventId();
+      if (!eventId) {
+        throw new Error('Missing eventId');
+      }
+      const response = await fetch('/api/rr-live/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId,
+          pollSec: Number(pollSecInput.value || 5)
+        })
+      });
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Sync failed');
+      }
+      return response.json();
+    }
+
+    async function fetchState() {
+      const eventId = currentEventId();
+      if (!eventId) {
+        return null;
+      }
+      const response = await fetch(`/api/rr-live/state/${encodeURIComponent(eventId)}`);
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Error loading state');
+      }
+      return response.json();
+    }
+
+    async function fetchRrOpenUrl(eventId) {
+      const response = await fetch(`/api/auth/rr-open-url/${encodeURIComponent(eventId)}`);
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Unable to build RR URL');
+      }
+      return response.json();
+    }
+
+    async function applyRowAction(rowKey, action) {
+      const eventId = currentEventId();
+      const response = await fetch(`/api/rr-live/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowKey)}/actions/${encodeURIComponent(action)}`, {
+        method: 'POST'
+      });
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Row action failed');
+      }
+      return response.json();
+    }
+
+    async function deleteRow(rowKey) {
+      const eventId = currentEventId();
+      const response = await fetch(`/api/rr-live/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowKey)}`, {
+        method: 'DELETE'
+      });
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Delete failed');
+      }
+      return response.json();
+    }
+
+    async function globalAction(action) {
+      const eventId = currentEventId();
+      if (!eventId) {
+        throw new Error('Missing eventId');
+      }
+      let url = '';
+      let method = 'POST';
+      switch ((action || '').toLowerCase()) {
+        case 'play':
+          url = `/api/rr-live/start/${encodeURIComponent(eventId)}`;
+          break;
+        case 'stop':
+          url = `/api/rr-live/stop/${encodeURIComponent(eventId)}`;
+          break;
+        case 'reset':
+          url = `/api/rr-live/reset/${encodeURIComponent(eventId)}`;
+          break;
+        case 'delete':
+          url = `/api/rr-live/rows/${encodeURIComponent(eventId)}/all`;
+          method = 'DELETE';
+          break;
+        default:
+          throw new Error('Unsupported global action');
+      }
+      const response = await fetch(url, { method });
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error(`Global ${action} failed`);
+      }
+      return response.json();
+    }
+
+    function renderState(state) {
+      if (!state) {
+        rowsBody.innerHTML = '';
+        runningBadge.className = 'badge text-bg-secondary align-self-center';
+        runningBadge.textContent = 'Rows running: 0';
+        lastSync.textContent = '';
+        return;
+      }
+
+      rrIdLabel.textContent = state.eventId || rrIdLabel.textContent || '';
+      if (state.eventId) {
+        sessionStorage.setItem(STORAGE_KEYS.rrLiveEventId, state.eventId);
+      }
+      pollSecInput.value = state.pollSec || 5;
+
+      const runningCount = (state.rows || []).filter((row) => !!row.running).length;
+      runningBadge.className = runningCount > 0
+        ? 'badge text-bg-success align-self-center'
+        : 'badge text-bg-secondary align-self-center';
+      runningBadge.textContent = `Rows running: ${runningCount}`;
+      lastSync.textContent = state.lastSync ? `Last sync: ${state.lastSync}` : '';
+
+      rowsBody.innerHTML = '';
+      (state.rows || []).forEach((row) => {
+        const tr = document.createElement('tr');
+        const rowUrl = row.url || '';
+        const safeUrl = escapeHtml(rowUrl);
+        tr.innerHTML = `
+          <td class="text-nowrap">
+            <button class="btn btn-sm btn-outline-success mini-btn row-action" data-action="play" data-key="${row.key || ''}">▶</button>
+            <button class="btn btn-sm btn-outline-secondary mini-btn row-action" data-action="stop" data-key="${row.key || ''}">■</button>
+            <button class="btn btn-sm btn-outline-warning mini-btn row-action" data-action="reset" data-key="${row.key || ''}">⟲</button>
+            <button class="btn btn-sm btn-outline-danger mini-btn row-action" data-action="delete" data-key="${row.key || ''}">🗑</button>
+          </td>
+          <td>${row.name || ''}</td>
+          <td class="mono small"><a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a></td>
+          <td>${row.status || ''}</td>
+          <td>${row.lastUpdate || ''}</td>
+          <td>${row.lastBytes || 0}</td>
+          <td class="text-danger small">${row.lastError || ''}</td>
+        `;
+
+        const running = !!row.running;
+        tr.querySelector('[data-action="play"]').disabled = running;
+        tr.querySelector('[data-action="stop"]').disabled = !running;
+        tr.querySelector('[data-action="reset"]').disabled = running;
+        tr.querySelector('[data-action="delete"]').disabled = running;
+
+        tr.querySelectorAll('.row-action').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const key = btn.dataset.key;
+            const action = btn.dataset.action;
+            try {
+              if (action === 'delete') {
+                await deleteRow(key);
+                appendMessage('ui', `Row DELETE requested: ${key}`);
+              } else {
+                await applyRowAction(key, action);
+                appendMessage('ui', `Row ${action.toUpperCase()} requested: ${key}`);
+              }
+            } catch (error) {
+              appendMessage('ui', `Row action error: ${error.message}`);
+              alert(error.message);
+            }
+          });
+        });
+
+        rowsBody.appendChild(tr);
+      });
+    }
+
+    async function refreshView() {
+      const state = await fetchState();
+      renderState(state);
+    }
+
+    async function autoSyncOnEnter() {
+      const eventId = currentEventId();
+      if (!eventId) {
+        return;
+      }
+      const state = await syncState();
+      renderState(state);
+    }
+
+    function connectWebSocket() {
+      const socket = new SockJS('/ws');
+      wsClient = new StompJs.Client({
+        webSocketFactory: () => socket,
+        reconnectDelay: 5000,
+        onConnect: () => {
+          wsClient.subscribe('/topic/rr-live-updates', (message) => {
+            try {
+              const payload = JSON.parse(message.body);
+              if (!payload || payload.eventId !== currentEventId() || !payload.state) {
+                return;
+              }
+              renderState(payload.state);
+              appendMessage('ws', 'State update received');
+            } catch (_error) {
+            }
+          });
+
+          wsClient.subscribe('/topic/rr-live-messages', (message) => {
+            try {
+              const payload = JSON.parse(message.body);
+              if (!payload || payload.eventId !== currentEventId()) {
+                return;
+              }
+              appendMessage(payload.sender || 'rr-live', payload.content || '');
+            } catch (_error) {
+            }
+          });
+        }
+      });
+      wsClient.activate();
+    }
+
+    toDashboardBtn.addEventListener('click', () => {
+      window.location.href = '/dashboard.html';
+    });
+
+    toDetailBtn.addEventListener('click', () => {
+      const eventId = currentEventId();
+      if (!eventId) {
+        return;
+      }
+      window.location.href = `/gara-dettaglio.html?eventId=${encodeURIComponent(eventId)}`;
+    });
+
+    openIcronLiveBtn.addEventListener('click', () => {
+      const eventId = currentEventId();
+      if (!eventId) {
+        appendMessage('ui', 'Missing Event ID');
+        return;
+      }
+      const url = `https://www.icron.it/live/event/${encodeURIComponent(eventId)}`;
+      window.open(url, '_blank', 'noopener');
+    });
+
+    openRrBtn.addEventListener('click', async () => {
+      const eventId = currentEventId();
+      if (!eventId) {
+        appendMessage('ui', 'Missing Event ID');
+        return;
+      }
+      try {
+        const data = await fetchRrOpenUrl(eventId);
+        if (!data || !data.url) {
+          throw new Error('RR URL is empty');
+        }
+        window.open(data.url, '_blank', 'noopener');
+      } catch (error) {
+        appendMessage('ui', `Open RR error: ${error.message}`);
+      }
+    });
+
+    syncBtn.addEventListener('click', async () => {
+      try {
+        const state = await syncState();
+        renderState(state);
+        appendMessage('ui', `SYNC requested for event ${state.eventId || currentEventId()}`);
+      } catch (error) {
+        appendMessage('ui', `SYNC error: ${error.message}`);
+        alert(error.message);
+      }
+    });
+
+    refreshBtn.addEventListener('click', async () => {
+      try {
+        await refreshView();
+        appendMessage('ui', 'State refreshed');
+      } catch (error) {
+        appendMessage('ui', `Refresh error: ${error.message}`);
+        alert(error.message);
+      }
+    });
+
+    clearMessagesBtn.addEventListener('click', () => {
+      messagesLog.innerHTML = '';
+    });
+
+    messagesToggleBtn.addEventListener('click', () => {
+      setMessagesCollapsed(!messagesPanel.classList.contains('is-collapsed'));
+    });
+
+    globalPlayBtn.addEventListener('click', async () => {
+      try {
+        await globalAction('play');
+        appendMessage('ui', 'Global PLAY requested');
+      } catch (error) {
+        appendMessage('ui', `Global PLAY error: ${error.message}`);
+        alert(error.message);
+      }
+    });
+
+    globalStopBtn.addEventListener('click', async () => {
+      try {
+        await globalAction('stop');
+        appendMessage('ui', 'Global STOP requested');
+      } catch (error) {
+        appendMessage('ui', `Global STOP error: ${error.message}`);
+        alert(error.message);
+      }
+    });
+
+    globalResetBtn.addEventListener('click', async () => {
+      if (!window.confirm('Reset all rows and clear runtime memory?')) {
+        return;
+      }
+      try {
+        await globalAction('reset');
+        appendMessage('ui', 'Global RESET requested');
+      } catch (error) {
+        appendMessage('ui', `Global RESET error: ${error.message}`);
+        alert(error.message);
+      }
+    });
+
+    globalDeleteBtn.addEventListener('click', async () => {
+      if (!window.confirm('Delete all rows?')) {
+        return;
+      }
+      try {
+        await globalAction('delete');
+        appendMessage('ui', 'Global DELETE requested');
+      } catch (error) {
+        appendMessage('ui', `Global DELETE error: ${error.message}`);
+        alert(error.message);
+      }
+    });
+
+    (async function init() {
+      if (!requireLogin()) {
+        return;
+      }
+      setMessagesCollapsed(localStorage.getItem('rr.live.messagesCollapsed') === '1');
+      startKeepAlive();
+      const eventId = currentEventId();
+      if (eventId) {
+        rrIdLabel.textContent = eventId;
+        sessionStorage.setItem(STORAGE_KEYS.rrLiveEventId, eventId);
+      }
+      await loadEventMeta();
+      appendMessage('ui', 'RR Live page loaded');
+      try {
+        await keepSessionAlive(true);
+        await refreshView();
+        await autoSyncOnEnter();
+      } catch (_error) {
+        try {
+          await refreshView();
+        } catch (_ignored) {
+        }
+      }
+      connectWebSocket();
+    })();
+  </script>
+</body>
+</html>

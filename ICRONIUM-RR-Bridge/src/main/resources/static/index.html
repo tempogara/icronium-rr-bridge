@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login RR</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-8 col-lg-5">
+        <div class="card shadow-sm border-0">
+          <div class="card-body p-4">
+            <div class="text-center mb-3">
+              <img src="/images/icronium.png" alt="Icronium" style="max-height: 56px;">
+            </div>
+            <h1 class="h4 mb-4 text-center">Accesso RR</h1>
+
+            <div class="mb-3">
+              <label for="userId" class="form-label">User ID</label>
+              <input type="text" class="form-control" id="userId" placeholder="Inserisci user id">
+            </div>
+
+            <div class="mb-4">
+              <label for="password" class="form-label">Password</label>
+              <input type="password" class="form-control" id="password" placeholder="Inserisci password">
+            </div>
+
+            <div class="d-grid gap-2">
+              <button id="loginBtn" type="button" class="btn btn-primary">Login a RR</button>
+              <button id="localLoginBtn" type="button" class="btn btn-outline-secondary">Login a RR locale</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="resultBox" class="alert mt-3 d-none" role="alert"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const loginBtn = document.getElementById('loginBtn');
+    const localLoginBtn = document.getElementById('localLoginBtn');
+    const resultBox = document.getElementById('resultBox');
+    const userIdInput = document.getElementById('userId');
+    const passwordInput = document.getElementById('password');
+
+    const STORAGE_KEYS = {
+      userId: 'rr.userId',
+      password: 'rr.password',
+      auth: 'rr.auth'
+    };
+
+    function loadCredentialsFromStorage() {
+      const savedUserId = localStorage.getItem(STORAGE_KEYS.userId);
+      const savedPassword = localStorage.getItem(STORAGE_KEYS.password);
+
+      if (savedUserId) {
+        userIdInput.value = savedUserId;
+      }
+
+      if (savedPassword) {
+        passwordInput.value = savedPassword;
+      }
+    }
+
+    function saveCredentialsToStorage() {
+      localStorage.setItem(STORAGE_KEYS.userId, userIdInput.value);
+      localStorage.setItem(STORAGE_KEYS.password, passwordInput.value);
+    }
+
+    function saveAuthSession(mode, userId) {
+      localStorage.setItem(STORAGE_KEYS.auth, JSON.stringify({
+        mode,
+        userId,
+        loginAt: new Date().toISOString()
+      }));
+    }
+
+    function goToDashboard() {
+      window.location.href = '/dashboard.html';
+    }
+
+    function showResult(ok, text) {
+      resultBox.classList.remove('d-none', 'alert-success', 'alert-danger');
+      resultBox.classList.add(ok ? 'alert-success' : 'alert-danger');
+      resultBox.textContent = text;
+    }
+
+    async function callApi(url, payload) {
+      const options = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+
+      if (payload) {
+        options.body = JSON.stringify(payload);
+      }
+
+      const response = await fetch(url, options);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Errore durante la chiamata al servizio');
+      }
+
+      return data;
+    }
+
+    loginBtn.addEventListener('click', async () => {
+      const userId = userIdInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!userId || !password) {
+        showResult(false, 'Inserisci userId e password');
+        return;
+      }
+
+      try {
+        saveCredentialsToStorage();
+        const data = await callApi('/api/auth/login', { userId, password });
+        saveAuthSession(data.mode, data.userId || userId);
+        goToDashboard();
+      } catch (error) {
+        showResult(false, error.message);
+      }
+    });
+
+    localLoginBtn.addEventListener('click', async () => {
+      try {
+        saveCredentialsToStorage();
+        const data = await callApi('/api/auth/login-local');
+        saveAuthSession(data.mode, data.userId || 'local-user');
+        goToDashboard();
+      } catch (error) {
+        showResult(false, error.message);
+      }
+    });
+
+    userIdInput.addEventListener('input', saveCredentialsToStorage);
+    passwordInput.addEventListener('input', saveCredentialsToStorage);
+    loadCredentialsFromStorage();
+  </script>
+</body>
+</html>

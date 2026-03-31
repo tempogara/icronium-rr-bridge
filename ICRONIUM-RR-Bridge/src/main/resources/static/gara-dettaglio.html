@@ -1,0 +1,2028 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Race Detail</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      padding-bottom: 240px;
+      background: #f6f7f9;
+    }
+
+    body.messages-collapsed {
+      padding-bottom: 56px;
+    }
+
+    .toolbar-box {
+      background: #ececee;
+      border: 1px solid #d2d2d2;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .toolbar-row {
+      border-bottom: 1px solid #d4d4d4;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+
+    .messages-panel {
+      height: 220px;
+      border-top: 1px solid #dee2e6;
+      transition: transform 0.2s ease;
+    }
+
+    .messages-panel.is-collapsed {
+      transform: translateY(calc(100% - 46px));
+    }
+
+    .messages-log {
+      height: 130px;
+      overflow-y: auto;
+      background: #f8f9fa;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.85rem;
+    }
+
+    .messages-toggle {
+      min-width: 38px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .mini-btn {
+      min-width: 48px;
+    }
+
+    .action-btn {
+      background-color: #2f3338;
+      color: #ffffff;
+      border: 1px solid #1f2327;
+    }
+
+    .action-btn:hover:not(:disabled) {
+      background-color: #1f2327;
+      color: #ffffff;
+    }
+
+    .action-btn:disabled {
+      background-color: #eceff3;
+      color: #aeb4bb;
+      border-color: #d8dde3;
+      opacity: 1;
+      cursor: not-allowed;
+    }
+
+    .delta-grid {
+      display: grid;
+      grid-template-columns: repeat(10, minmax(42px, 1fr));
+      gap: 4px;
+      min-width: 460px;
+    }
+
+    .delta-group {
+      display: grid;
+      gap: 4px;
+      min-width: 520px;
+    }
+
+    .delta-row-wrap {
+      display: grid;
+      grid-template-columns: 58px 1fr;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .delta-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #495057;
+      text-transform: uppercase;
+      text-align: right;
+    }
+
+    .totals-box {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(38px, auto));
+      gap: 3px;
+      min-width: 126px;
+    }
+
+    .totals-head {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: #6c757d;
+      text-align: center;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .totals-value {
+      border: 1px solid #d6dae0;
+      border-radius: 4px;
+      background: #f8f9fb;
+      padding: 3px 6px;
+      text-align: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #212529;
+      min-width: 0;
+      line-height: 1.1;
+    }
+
+    .totals-button {
+      width: 100%;
+      padding: 3px 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      line-height: 1.1;
+    }
+
+    .totals-green {
+      background: #1f9d55;
+      border-color: #18804a;
+      color: #ffffff;
+    }
+
+    .totals-yellow {
+      background: #f2c94c;
+      border-color: #dfb52f;
+      color: #1f2327;
+    }
+
+    .totals-red {
+      background: #d64545;
+      border-color: #b33434;
+      color: #ffffff;
+    }
+
+    .delta-cell {
+      border: 1px solid #d6dae0;
+      border-radius: 4px;
+      background: #f8f9fb;
+      padding: 2px 4px;
+      text-align: center;
+      font-size: 0.8rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .delta-cell-btn {
+      width: 100%;
+      padding: 2px 4px;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      line-height: inherit;
+    }
+
+    .delta-cell-btn:hover {
+      text-decoration: underline;
+    }
+
+    .delta-cell-positive {
+      background: #1f9d55;
+      border-color: #18804a;
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .delta-cell-warning {
+      background: #f2c94c;
+      border-color: #dfb52f;
+      color: #1f2327;
+      font-weight: 700;
+    }
+
+    .discarded-table {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.82rem;
+    }
+
+    .source-cell {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .source-text {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .source-name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 280px;
+    }
+
+    .source-meta {
+      font-size: 0.72rem;
+      color: #6c757d;
+    }
+
+    .last-download-cell {
+      display: grid;
+      gap: 2px;
+      line-height: 1.1;
+    }
+
+    .last-download-date {
+      font-size: 0.72rem;
+      color: #6c757d;
+    }
+
+    .last-download-time {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #212529;
+    }
+
+    .last-download-elapsed {
+      font-size: 0.72rem;
+      color: #495057;
+    }
+
+    .source-content-toggle {
+      min-width: 64px;
+    }
+
+    .source-content-filter {
+      min-width: 220px;
+      font-size: 0.82rem;
+    }
+
+    .source-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #fff;
+      flex: 0 0 22px;
+    }
+
+    .source-local { background: #198754; }
+    .source-lan { background: #fd7e14; }
+    .source-web { background: #0d6efd; }
+
+    .row-status {
+      margin-top: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 2px 8px;
+      display: inline-block;
+    }
+
+    .row-status-running {
+      background: #1f9d55;
+      color: #ffffff;
+    }
+
+    .row-status-stopped {
+      background: #d64545;
+      color: #ffffff;
+    }
+
+    .row-status-error {
+      background: #f2c94c;
+      color: #1f2327;
+    }
+
+    .rrid-label {
+      display: inline-block;
+      background: #0d6efd;
+      color: #ffffff;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-weight: 600;
+      min-width: 180px;
+    }
+
+    .btn-bordeaux {
+      background-color: #d20610;
+      border-color: #b7050e;
+      color: #ffffff;
+    }
+
+    .btn-bordeaux:hover {
+      background-color: #b7050e;
+      border-color: #99040c;
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg bg-white border-bottom mb-3">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0">
+        <img src="/images/icronium.png" alt="Icronium" style="max-height: 42px;">
+      </span>
+      <div class="d-flex align-items-center gap-2">
+        <button id="btnOpenRr" class="btn btn-sm btn-bordeaux d-inline-flex align-items-center gap-2" type="button">
+          <img src="/images/open-rr.png" alt="" style="width:18px;height:18px;border-radius:3px;">
+          <span>Open RR</span>
+        </button>
+        <button id="btnRrLive" class="btn btn-sm btn-outline-secondary" type="button">RR Live</button>
+        <button id="backToMenuBtn" class="btn btn-sm btn-outline-primary" type="button">Dashboard</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container-fluid py-3">
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-8">
+        <div id="eventNameText" class="fw-bold fs-5"></div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div id="eventDateText" class="fw-bold fs-5"></div>
+      </div>
+    </div>
+
+    <div class="toolbar-box mb-3">
+      <div class="d-flex flex-wrap align-items-center gap-2 toolbar-row">
+        <span class="mb-0 fw-semibold">RR ID:</span>
+        <span id="rrIdLabel" class="rrid-label"></span>
+        <button id="syncBtn" class="btn btn-outline-secondary">SYNC</button>
+        <button id="btnBibChip" class="btn btn-outline-secondary">BIB-CHIP (0)</button>
+        <button id="btnTp" class="btn btn-outline-secondary">TP (0)</button>
+        <button id="btnScarti" class="btn btn-outline-secondary">Discarded (0)</button>
+        <button id="btnBlacklist" class="btn btn-outline-secondary">Blacklist (0)</button>
+        <button id="btnUnknownChips" class="btn btn-outline-secondary">Unknown chips (0)</button>
+        <button id="btnAddFilePassaggi" class="btn btn-outline-secondary">Add passings file</button>
+        <button id="btnLivePage" class="btn btn-outline-secondary">Open Live Page</button>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover mb-0 align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>
+                  <div>Actions</div>
+                  <div class="d-flex flex-wrap align-items-center gap-1 mt-1">
+                    <button id="startAllBtn" class="btn action-btn btn-sm mini-btn">▶</button>
+                    <button id="stopAllBtn" class="btn action-btn btn-sm mini-btn">■</button>
+                    <button id="rewindAllBtn" class="btn action-btn btn-sm mini-btn">|◀</button>
+                    <button id="deleteAllBtn" class="btn action-btn btn-sm mini-btn">🗑</button>
+                  </div>
+                </th>
+                <th>Source</th>
+                <th>Timing point</th>
+                <th>Last download</th>
+                <th>Totals</th>
+                <th>Last 10 cycles</th>
+              </tr>
+            </thead>
+            <tbody id="detailRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <section id="messagesPanel" class="messages-panel fixed-bottom bg-white shadow-lg">
+    <div class="container-fluid py-2">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex align-items-center gap-2">
+          <strong>Messages</strong>
+          <span id="wsStatus" class="badge text-bg-warning">Connecting...</span>
+        </div>
+        <button id="messagesToggleBtn" type="button" class="btn btn-sm btn-outline-secondary messages-toggle" aria-label="Collapse messages">▼</button>
+      </div>
+      <div id="messagesLog" class="messages-log border rounded p-2"></div>
+    </div>
+  </section>
+
+  <div class="modal fade" id="tpModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Timing points</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="table-responsive">
+            <table class="table table-striped mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>Timing point</th>
+                </tr>
+              </thead>
+              <tbody id="tpModalBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="bibChipModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">CHIP - BIB</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="table-responsive" style="max-height: 60vh;">
+            <table class="table table-striped table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>CHIP</th>
+                  <th>BIB</th>
+                  <th>LAST NAME</th>
+                  <th>FIRST NAME</th>
+                </tr>
+              </thead>
+              <tbody id="bibChipModalBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="filePassaggiModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add passings file</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="filePassaggiSourceInput" class="form-label">Enter URL or local file path</label>
+            <input id="filePassaggiSourceInput" class="form-control" type="text" placeholder="https://... or /local/path/file.tags">
+          </div>
+          <div class="mb-2">
+            <label for="filePassaggiTpSelect" class="form-label">Timing point</label>
+            <select id="filePassaggiTpSelect" class="form-select"></select>
+          </div>
+          <div class="mb-2">
+            <label for="filePassaggiSyncInput" class="form-label">Sync offset (+/- hh:mm:ss.sss)</label>
+            <input id="filePassaggiSyncInput" class="form-control" type="text" value="+00:00:00.000" placeholder="+00:00:00.000">
+          </div>
+          <div class="mb-0">
+            <label for="filePassaggiScaricaOgniInput" class="form-label">Download every (seconds)</label>
+            <input id="filePassaggiScaricaOgniInput" class="form-control" type="number" min="1" value="60">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button id="saveFilePassaggiBtn" type="button" class="btn btn-primary">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="editTimingPointModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit timing point</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <label for="editSourceInput" class="form-label">Source</label>
+          <input id="editSourceInput" class="form-control" type="text" placeholder="https://... or /local/path/file.tags">
+          <label for="editTpSelect" class="form-label">Timing point</label>
+          <select id="editTpSelect" class="form-select"></select>
+          <label for="editSyncInput" class="form-label mt-3">Sync offset (+/- hh:mm:ss.sss)</label>
+          <input id="editSyncInput" class="form-control" type="text" value="+00:00:00.000" placeholder="+00:00:00.000">
+          <label for="editScaricaOgniInput" class="form-label mt-3">Download every (seconds)</label>
+          <input id="editScaricaOgniInput" class="form-control" type="number" min="1" value="60">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button id="saveEditTpBtn" type="button" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="discardedModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Discarded lines</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="table-responsive" style="max-height: 60vh;">
+            <table class="table table-striped table-hover mb-0 discarded-table">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 80px;">#</th>
+                  <th>Discarded line (BIB-CHIP not found)</th>
+                  <th style="width: 120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="discardedModalBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="sourceContentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 id="sourceContentTitle" class="modal-title">File content</h5>
+            <div id="sourceContentSubtitle" class="small text-muted mt-1"></div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="table-responsive" style="max-height: 65vh;">
+            <table class="table table-striped table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 55%;">
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                      <span>Passing</span>
+                      <button id="sourceContentOrderBtn" type="button" class="btn btn-sm btn-outline-secondary source-content-toggle">Newest</button>
+                    </div>
+                  </th>
+                  <th>Athlete</th>
+                  <th style="width: 120px;">Actions</th>
+                </tr>
+                <tr>
+                  <th colspan="3">
+                    <input id="sourceContentFilterInput" type="text" class="form-control form-control-sm source-content-filter" placeholder="Filter passings or athlete">
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="sourceContentBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="unknownChipsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Unknown chips</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="table-responsive" style="max-height: 60vh;">
+            <table class="table table-striped table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 80px;">#</th>
+                  <th>Chip</th>
+                  <th style="width: 120px;">Count</th>
+                </tr>
+              </thead>
+              <tbody id="unknownChipsModalBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="blacklistModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title">Blacklist</h5>
+            <div id="blacklistSubtitle" class="small text-muted mt-1"></div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="table-responsive" style="max-height: 60vh;">
+            <table class="table table-striped table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 70px;">#</th>
+                  <th style="width: 25%;">Source</th>
+                  <th style="width: 35%;">Code</th>
+                  <th>Athlete</th>
+                  <th style="width: 120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="blacklistModalBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="cycleDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 id="cycleDetailsTitle" class="modal-title">Cycle details</h5>
+            <div id="cycleDetailsSubtitle" class="small text-muted mt-1"></div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="table-responsive" style="max-height: 65vh;">
+            <table class="table table-striped table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 80px;">#</th>
+                  <th>Passing</th>
+                  <th style="width: 35%;">Athlete</th>
+                </tr>
+              </thead>
+              <tbody id="cycleDetailsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const STORAGE_KEYS = {
+      auth: 'rr.auth',
+      selectedGara: 'rr.selectedGara'
+    };
+
+    const rrIdLabel = document.getElementById('rrIdLabel');
+    const eventNameText = document.getElementById('eventNameText');
+    const eventDateText = document.getElementById('eventDateText');
+    const backToMenuBtn = document.getElementById('backToMenuBtn');
+    const syncBtn = document.getElementById('syncBtn');
+    const btnBibChip = document.getElementById('btnBibChip');
+    const btnTp = document.getElementById('btnTp');
+    const btnScarti = document.getElementById('btnScarti');
+    const btnBlacklist = document.getElementById('btnBlacklist');
+    const btnUnknownChips = document.getElementById('btnUnknownChips');
+    const btnAddFilePassaggi = document.getElementById('btnAddFilePassaggi');
+    const btnOpenRr = document.getElementById('btnOpenRr');
+    const btnRrLive = document.getElementById('btnRrLive');
+    const btnLivePage = document.getElementById('btnLivePage');
+    const saveFilePassaggiBtn = document.getElementById('saveFilePassaggiBtn');
+    const filePassaggiSourceInput = document.getElementById('filePassaggiSourceInput');
+    const filePassaggiTpSelect = document.getElementById('filePassaggiTpSelect');
+    const filePassaggiSyncInput = document.getElementById('filePassaggiSyncInput');
+    const filePassaggiScaricaOgniInput = document.getElementById('filePassaggiScaricaOgniInput');
+    const startAllBtn = document.getElementById('startAllBtn');
+    const stopAllBtn = document.getElementById('stopAllBtn');
+    const rewindAllBtn = document.getElementById('rewindAllBtn');
+    const deleteAllBtn = document.getElementById('deleteAllBtn');
+    const editTpSelect = document.getElementById('editTpSelect');
+    const editSourceInput = document.getElementById('editSourceInput');
+    const editSyncInput = document.getElementById('editSyncInput');
+    const editScaricaOgniInput = document.getElementById('editScaricaOgniInput');
+    const saveEditTpBtn = document.getElementById('saveEditTpBtn');
+    const detailRows = document.getElementById('detailRows');
+    const tpModalBody = document.getElementById('tpModalBody');
+    const bibChipModalBody = document.getElementById('bibChipModalBody');
+    const discardedModalBody = document.getElementById('discardedModalBody');
+    const unknownChipsModalBody = document.getElementById('unknownChipsModalBody');
+    const sourceContentTitle = document.getElementById('sourceContentTitle');
+    const sourceContentSubtitle = document.getElementById('sourceContentSubtitle');
+    const sourceContentBody = document.getElementById('sourceContentBody');
+    const sourceContentOrderBtn = document.getElementById('sourceContentOrderBtn');
+    const sourceContentFilterInput = document.getElementById('sourceContentFilterInput');
+    const blacklistSubtitle = document.getElementById('blacklistSubtitle');
+    const blacklistModalBody = document.getElementById('blacklistModalBody');
+    const cycleDetailsTitle = document.getElementById('cycleDetailsTitle');
+    const cycleDetailsSubtitle = document.getElementById('cycleDetailsSubtitle');
+    const cycleDetailsBody = document.getElementById('cycleDetailsBody');
+    const messagesPanel = document.getElementById('messagesPanel');
+    const messagesLog = document.getElementById('messagesLog');
+    const messagesToggleBtn = document.getElementById('messagesToggleBtn');
+    const wsStatus = document.getElementById('wsStatus');
+    const tpModal = new bootstrap.Modal(document.getElementById('tpModal'));
+    const bibChipModal = new bootstrap.Modal(document.getElementById('bibChipModal'));
+    const filePassaggiModal = new bootstrap.Modal(document.getElementById('filePassaggiModal'));
+    const editTimingPointModal = new bootstrap.Modal(document.getElementById('editTimingPointModal'));
+    const discardedModal = new bootstrap.Modal(document.getElementById('discardedModal'));
+    const sourceContentModal = new bootstrap.Modal(document.getElementById('sourceContentModal'));
+    const unknownChipsModal = new bootstrap.Modal(document.getElementById('unknownChipsModal'));
+    const blacklistModal = new bootstrap.Modal(document.getElementById('blacklistModal'));
+    const cycleDetailsModal = new bootstrap.Modal(document.getElementById('cycleDetailsModal'));
+    let editingRowId = null;
+    let currentRows = [];
+    let sourceContentRows = [];
+    let sourceContentNameMap = new Map();
+    let sourceContentNewestFirst = true;
+    let sourceContentFilter = '';
+    let sourceContentRowId = null;
+    let sourceContentBlacklistedCodes = new Set();
+    let blacklistNameMap = new Map();
+    let keepAliveTimerId = null;
+
+    function getEventId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('eventId');
+    }
+
+    function loadEventMeta() {
+      const eventId = getEventId();
+      rrIdLabel.textContent = eventId || '';
+
+      const raw = sessionStorage.getItem(STORAGE_KEYS.selectedGara);
+      if (!raw) {
+        eventNameText.textContent = '';
+        eventDateText.textContent = '';
+        return;
+      }
+      try {
+        const data = JSON.parse(raw);
+        if (data && data.id === eventId) {
+          eventNameText.textContent = data.eventName || '';
+          eventDateText.textContent = data.eventDate || '';
+          return;
+        }
+      } catch (_error) {
+      }
+      eventNameText.textContent = '';
+      eventDateText.textContent = '';
+    }
+
+    function requireLogin() {
+      const auth = localStorage.getItem(STORAGE_KEYS.auth);
+      if (!auth) {
+        window.location.href = '/index.html';
+        return false;
+      }
+      return true;
+    }
+
+    function redirectToLogin() {
+      localStorage.removeItem(STORAGE_KEYS.auth);
+      window.location.href = '/index.html';
+    }
+
+    async function keepSessionAlive(silent) {
+      const response = await fetch('/api/auth/keepalive');
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Keepalive failed');
+      }
+      if (!silent) {
+        appendWsMessage('Session keepalive OK');
+      }
+      return response.json();
+    }
+
+    function startKeepAlive() {
+      if (keepAliveTimerId) {
+        window.clearInterval(keepAliveTimerId);
+      }
+      keepAliveTimerId = window.setInterval(async () => {
+        try {
+          await keepSessionAlive(true);
+        } catch (error) {
+          appendWsMessage(error.message);
+        }
+      }, 5 * 60 * 1000);
+    }
+
+    function appendWsMessage(text) {
+      const line = document.createElement('div');
+      line.textContent = `${new Date().toLocaleTimeString()} - ${text}`;
+      messagesLog.appendChild(line);
+      messagesLog.scrollTop = messagesLog.scrollHeight;
+    }
+
+    function setWsStatus(label, style) {
+      wsStatus.className = `badge ${style}`;
+      wsStatus.textContent = label;
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setMessagesCollapsed(collapsed) {
+      const isCollapsed = !!collapsed;
+      messagesPanel.classList.toggle('is-collapsed', isCollapsed);
+      document.body.classList.toggle('messages-collapsed', isCollapsed);
+      messagesToggleBtn.textContent = isCollapsed ? '▲' : '▼';
+      messagesToggleBtn.setAttribute('aria-label', isCollapsed ? 'Expand messages' : 'Collapse messages');
+      localStorage.setItem('rr.messagesCollapsed', isCollapsed ? '1' : '0');
+    }
+
+    function resetView() {
+      detailRows.innerHTML = '';
+      currentRows = [];
+      btnBibChip.textContent = 'BIB-CHIP (0)';
+      btnTp.textContent = 'TP (0)';
+      btnScarti.textContent = 'Discarded (0)';
+      btnBlacklist.textContent = 'Blacklist (0)';
+      btnUnknownChips.textContent = 'Unknown chips (0)';
+      stopAllBtn.disabled = true;
+      startAllBtn.disabled = false;
+      rewindAllBtn.disabled = false;
+      deleteAllBtn.disabled = false;
+    }
+
+    function renderSync(data) {
+      rrIdLabel.textContent = data.eventId || getEventId() || '';
+      btnBibChip.textContent = `BIB-CHIP (${data.participantsCount || 0})`;
+      btnTp.textContent = `TP (${(data.timingPoints || []).length})`;
+      btnScarti.textContent = 'Discarded (0)';
+      btnBlacklist.textContent = 'Blacklist (0)';
+      btnUnknownChips.textContent = 'Unknown chips (0)';
+      appendWsMessage(`SYNC completed: participants=${data.participantsCount || 0}, timingPoints=${(data.timingPoints || []).length}`);
+    }
+
+    function renderRows(rows) {
+      currentRows = Array.isArray(rows) ? [...rows] : [];
+      currentRows.sort((a, b) => {
+        const ta = (a && a.timingPoint ? a.timingPoint : '').toString().toLowerCase();
+        const tb = (b && b.timingPoint ? b.timingPoint : '').toString().toLowerCase();
+        if (ta < tb) return -1;
+        if (ta > tb) return 1;
+        return 0;
+      });
+      detailRows.innerHTML = '';
+      let hasRunningRows = false;
+      let hasStoppedRows = false;
+      currentRows.forEach((row) => {
+        const stato = row.stato || 'Stopped';
+        const statoLower = stato.toLowerCase();
+        const isRunning = statoLower === 'running' || statoLower === 'error';
+        const isError = !!row.errorState;
+        const isStopped = !isRunning;
+        if (isRunning) {
+          hasRunningRows = true;
+        }
+        if (isStopped) {
+          hasStoppedRows = true;
+        }
+
+        const tr = document.createElement('tr');
+        tr.dataset.rowId = row.rowId || '';
+        tr.innerHTML = `
+          <td>
+            <div class="d-flex gap-1">
+              <button class="btn btn-sm action-btn row-action" data-action="start">▶</button>
+              <button class="btn btn-sm action-btn row-action" data-action="stop">■</button>
+              <button class="btn btn-sm action-btn row-action" data-action="edit">✎</button>
+              <button class="btn btn-sm action-btn row-action" data-action="duplicate">⧉</button>
+              <button class="btn btn-sm action-btn row-action" data-action="rewind" nowrap>|◀</button>
+              <button class="btn btn-sm action-btn row-action" data-action="delete">🗑</button>
+            </div>
+            <div class="row-status ${isError ? 'row-status-error' : (isRunning ? 'row-status-running' : 'row-status-stopped')}" title="${row.lastErrorMessage || ''}">${isError ? 'ERROR' : (isRunning ? 'RUNNING' : 'STOPPED')}</div>
+          </td>
+          <td>${renderSourceCell(row)}</td>
+          <td>${row.timingPoint || ''}</td>
+          <td>${renderLastDownload(row.ultimoDownload)}</td>
+          <td>${renderTotals(row)}</td>
+          <td>${renderDeltaCells(row)}</td>
+        `;
+        const rowStartBtn = tr.querySelector('[data-action="start"]');
+        const rowStopBtn = tr.querySelector('[data-action="stop"]');
+        const rowEditBtn = tr.querySelector('[data-action="edit"]');
+        const rowDuplicateBtn = tr.querySelector('[data-action="duplicate"]');
+        const rowRewindBtn = tr.querySelector('[data-action="rewind"]');
+        const rowDeleteBtn = tr.querySelector('[data-action="delete"]');
+        rowStartBtn.disabled = isRunning;
+        rowStopBtn.disabled = !isRunning;
+        rowEditBtn.disabled = !isStopped;
+        rowDuplicateBtn.disabled = !isStopped;
+        rowRewindBtn.disabled = !isStopped;
+        rowDeleteBtn.disabled = !isStopped;
+
+        const showDiscardedBtn = tr.querySelector('.show-discarded-btn');
+        if (showDiscardedBtn) {
+          showDiscardedBtn.addEventListener('click', () => {
+            openDiscardedModal(row);
+          });
+        }
+        const showSourceBtn = tr.querySelector('.show-source-content');
+        if (showSourceBtn) {
+          showSourceBtn.addEventListener('click', async () => {
+            try {
+              await openSourceContentModal(tr.dataset.rowId, row.source || '');
+            } catch (error) {
+              appendWsMessage(error.message);
+            }
+          });
+        }
+        tr.querySelectorAll('.show-cycle-detail-btn').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            try {
+              await openCycleDetailsModal(row, btn.getAttribute('data-kind') || '', Number(btn.getAttribute('data-cycle-index')));
+            } catch (error) {
+              appendWsMessage(error.message);
+            }
+          });
+        });
+        tr.querySelectorAll('.row-action').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const action = btn.dataset.action;
+            const rowId = tr.dataset.rowId;
+            if (action === 'edit') {
+              try {
+                await openEditTimingPointModal(rowId, row.source, row.timingPoint, row.scaricaOgniSec, row.syncOffset);
+              } catch (error) {
+                appendWsMessage(error.message);
+              }
+              return;
+            }
+
+            if (action === 'duplicate') {
+              try {
+                const rowsAfterDuplicate = await duplicateRow(rowId);
+                renderRows(rowsAfterDuplicate);
+                appendWsMessage('Row duplicated');
+              } catch (error) {
+                appendWsMessage(error.message);
+              }
+              return;
+            }
+
+            if (action === 'delete') {
+              const ok = window.confirm('Confirm deletion of selected row?');
+              if (!ok) {
+                return;
+              }
+              try {
+                const rowsAfterDelete = await deleteRow(rowId);
+                renderRows(rowsAfterDelete);
+                appendWsMessage('Row deleted');
+              } catch (error) {
+                appendWsMessage(error.message);
+              }
+              return;
+            }
+
+            try {
+              const rowsAfterAction = await applyRowAction(rowId, action);
+              renderRows(rowsAfterAction);
+              appendWsMessage(`Row action: ${action}`);
+            } catch (error) {
+              appendWsMessage(error.message);
+            }
+          });
+        });
+        detailRows.appendChild(tr);
+      });
+
+      const hasRows = currentRows.length > 0;
+      startAllBtn.disabled = !hasRows || hasRunningRows || !hasStoppedRows;
+      stopAllBtn.disabled = !hasRunningRows;
+      rewindAllBtn.disabled = !hasRows || hasRunningRows;
+      deleteAllBtn.disabled = !hasRows || hasRunningRows;
+      const totalDiscarded = currentRows.reduce((sum, row) => sum + visibleDiscardedLines(row).length, 0);
+      const totalBlacklisted = currentRows.reduce((sum, row) => sum + (Array.isArray(row && row.blacklistedCodes) ? row.blacklistedCodes.length : 0), 0);
+      btnScarti.textContent = `Discarded (${totalDiscarded})`;
+      btnBlacklist.textContent = `Blacklist (${totalBlacklisted})`;
+      btnUnknownChips.textContent = `Unknown chips (${collectUnknownChips(currentRows).length})`;
+    }
+
+    function renderDeltaCells(row) {
+      const downloadDeltas = Array.isArray(row && row.downloadDeltas) ? row.downloadDeltas.slice(-10) : [];
+      const sentDeltas = Array.isArray(row && row.sentDeltas) ? row.sentDeltas.slice(-10) : [];
+      const values = downloadDeltas.map((value, index) => ({ value, cycleIndex: index }));
+      while (values.length < 10) {
+        values.unshift({ value: '', cycleIndex: null });
+      }
+      const sentValues = sentDeltas.map((value, index) => ({ value, cycleIndex: index }));
+      while (sentValues.length < 10) {
+        sentValues.unshift({ value: '', cycleIndex: null });
+      }
+      const cells = values.map((entry) => {
+        const value = entry.value;
+        const isPositive = Number(value) > 0;
+        const cssClass = isPositive ? 'delta-cell delta-cell-positive' : 'delta-cell';
+        if (entry.cycleIndex === null || value === '') {
+          return `<span class="${cssClass}">&nbsp;</span>`;
+        }
+        return `<span class="${cssClass}"><button type="button" class="delta-cell-btn show-cycle-detail-btn" data-kind="download" data-cycle-index="${entry.cycleIndex}">${value}</button></span>`;
+      }).join('');
+      const sentCells = sentValues.map((entry, index) => {
+        const value = entry.value;
+        const readValue = Number(values[index].value || 0);
+        const sentValue = Number(value || 0);
+        let cssClass = 'delta-cell';
+        if (value !== '' && readValue > 0 && sentValue < readValue) {
+          cssClass = 'delta-cell delta-cell-warning';
+        } else if (value !== '' && sentValue > 0) {
+          cssClass = 'delta-cell delta-cell-positive';
+        }
+        if (entry.cycleIndex === null || value === '') {
+          return `<span class="${cssClass}">&nbsp;</span>`;
+        }
+        return `<span class="${cssClass}"><button type="button" class="delta-cell-btn show-cycle-detail-btn" data-kind="sent" data-cycle-index="${entry.cycleIndex}">${value}</button></span>`;
+      }).join('');
+      return `<div class="delta-group">
+        <div class="delta-row-wrap"><span class="delta-label">DL</span><div class="delta-grid">${cells}</div></div>
+        <div class="delta-row-wrap"><span class="delta-label">OUT</span><div class="delta-grid">${sentCells}</div></div>
+      </div>`;
+    }
+
+    function renderSourceCell(row) {
+      const rowId = row && row.rowId ? row.rowId : '';
+      const source = row && row.source ? row.source : '';
+      const type = detectSourceType(source);
+      const iconClass = type === 'local' ? 'source-local' : (type === 'lan' ? 'source-lan' : 'source-web');
+      const iconText = type === 'local' ? 'L' : (type === 'lan' ? 'N' : 'W');
+      const fileName = extractFileName(source);
+      const safeSource = source || '';
+      const scaricaOgniSec = row && row.scaricaOgniSec;
+      const syncOffset = row && row.syncOffset;
+      const every = Number.isFinite(Number(scaricaOgniSec)) && Number(scaricaOgniSec) > 0 ? Number(scaricaOgniSec) : 60;
+      const sync = (syncOffset || '+00:00:00.000').trim();
+      const syncLine = sync !== '+00:00:00.000' ? `<span class="source-meta">sync ${sync}</span>` : '';
+      return `<div class="source-cell" title="${safeSource}">
+        <span class="source-icon ${iconClass}">${iconText}</span>
+        <span class="source-text">
+          <button type="button" class="btn btn-link p-0 text-start source-name show-source-content" data-row-id="${rowId || ''}">${fileName}</button>
+          <span class="source-meta">every ${every}s</span>
+          ${syncLine}
+        </span>
+      </div>`;
+    }
+
+    function renderLastDownload(lastDownload) {
+      const value = (lastDownload || '').trim();
+      if (!value) {
+        return '';
+      }
+      const parts = value.split(' ');
+      const datePart = parts[0] || '';
+      const timePart = parts[1] || '';
+      const parsed = parseBackendDateTime(value);
+      let elapsedText = '';
+      let epochMillis = '';
+      if (parsed) {
+        const elapsedSec = Math.max(0, Math.floor((Date.now() - parsed.getTime()) / 1000));
+        elapsedText = `elapsed ${formatElapsedHhMmSs(elapsedSec)}`;
+        epochMillis = String(parsed.getTime());
+      }
+      return `<div class="last-download-cell">
+        <span class="last-download-date">${datePart}</span>
+        <span class="last-download-time">${timePart}</span>
+        <span class="last-download-elapsed" data-last-download-epoch="${epochMillis}">${elapsedText}</span>
+      </div>`;
+    }
+
+    function formatElapsedHhMmSs(totalSeconds) {
+      const safe = Math.max(0, Number(totalSeconds) || 0);
+      const hours = Math.floor(safe / 3600);
+      const minutes = Math.floor((safe % 3600) / 60);
+      const seconds = safe % 60;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function refreshElapsedDisplays() {
+      document.querySelectorAll('.last-download-elapsed[data-last-download-epoch]').forEach((node) => {
+        const raw = node.getAttribute('data-last-download-epoch') || '';
+        const epoch = Number(raw);
+        if (!Number.isFinite(epoch) || epoch <= 0) {
+          node.textContent = '';
+          return;
+        }
+        const elapsedSec = Math.max(0, Math.floor((Date.now() - epoch) / 1000));
+        node.textContent = `elapsed ${formatElapsedHhMmSs(elapsedSec)}`;
+      });
+    }
+
+    function parseBackendDateTime(value) {
+      const match = value.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
+      if (!match) {
+        return null;
+      }
+      const year = Number(match[1]);
+      const month = Number(match[2]) - 1;
+      const day = Number(match[3]);
+      const hour = Number(match[4]);
+      const minute = Number(match[5]);
+      const second = Number(match[6]);
+      return new Date(year, month, day, hour, minute, second);
+    }
+
+    function detectSourceType(source) {
+      const value = (source || '').trim().toLowerCase();
+      if (value.includes('192.168.')) {
+        return 'lan';
+      }
+      if (value.startsWith('http://') || value.startsWith('https://')) {
+        return 'web';
+      }
+      return 'local';
+    }
+
+    function extractFileName(source) {
+      const value = (source || '').trim();
+      if (!value) {
+        return '';
+      }
+      const noQuery = value.split('?')[0];
+      const normalized = noQuery.replace(/\\/g, '/');
+      const chunks = normalized.split('/');
+      return chunks[chunks.length - 1] || value;
+    }
+
+    function renderTotals(row) {
+      const read = Number.isFinite(Number(row && row.righeFile)) ? Number(row.righeFile) : 0;
+      const sent = Number.isFinite(Number(row && row.righePo)) ? Number(row.righePo) : 0;
+      const discarded = visibleDiscardedLines(row).length;
+      const readClass = read > 0 ? 'totals-value totals-green' : 'totals-value';
+      let sentClass = 'totals-value totals-red';
+      if (sent > 0 && sent < read) {
+        sentClass = 'totals-value totals-yellow';
+      } else if (sent > 0 && sent === read) {
+        sentClass = 'totals-value totals-green';
+      }
+      const discardedBtnClass = read > 0 && (discarded / read) > 0.10
+        ? 'btn btn-sm btn-danger totals-button show-discarded-btn'
+        : (discarded > 0
+          ? 'btn btn-sm btn-danger totals-button show-discarded-btn'
+          : 'btn btn-sm btn-outline-secondary totals-button show-discarded-btn');
+      return `<div class="totals-box">
+        <span class="totals-head">READ</span>
+        <span class="totals-head">SENT</span>
+        <span class="totals-head">DISC</span>
+        <span class="${readClass}" title="Read">${read}</span>
+        <span class="${sentClass}" title="Sent">${sent}</span>
+        <button type="button" class="${discardedBtnClass}" title="Discarded">${discarded}</button>
+      </div>`;
+    }
+
+    function openDiscardedModal(row) {
+      discardedModalBody.innerHTML = '';
+      const discardedLines = visibleDiscardedLines(row);
+      const rowId = row && row.rowId ? row.rowId : '';
+      if (discardedLines.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="3" class="text-center text-muted py-3">No discarded lines</td>';
+        discardedModalBody.appendChild(tr);
+      } else {
+        discardedLines.forEach((line, index) => {
+          const chip = extractChipFromDiscardedLine(line);
+          const actionCell = rowId && chip
+            ? `<button type="button" class="btn btn-sm btn-outline-danger discarded-blacklist-btn" data-code="${escapeHtml(chip)}">Black list</button>`
+            : '';
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${index + 1}</td><td>${escapeHtml(line || '')}</td><td>${actionCell}</td>`;
+          const blacklistBtn = tr.querySelector('.discarded-blacklist-btn');
+          if (blacklistBtn) {
+            blacklistBtn.addEventListener('click', async () => {
+              const code = blacklistBtn.getAttribute('data-code') || '';
+              if (!rowId || !code) {
+                return;
+              }
+              try {
+                const rowsAfterBlacklist = await blacklistCode(rowId, code);
+                currentRows = Array.isArray(rowsAfterBlacklist) ? [...rowsAfterBlacklist] : currentRows;
+                const updatedRow = currentRows.find((currentRow) => currentRow.rowId === rowId);
+                renderRows(currentRows);
+                openDiscardedModal(updatedRow || { rowId, discardedLines: [] });
+                appendWsMessage(`Code blacklisted: ${code}`);
+              } catch (error) {
+                appendWsMessage(error.message);
+              }
+            });
+          }
+          discardedModalBody.appendChild(tr);
+        });
+      }
+      discardedModal.show();
+    }
+
+    function visibleDiscardedLines(rowOrLines) {
+      const lines = Array.isArray(rowOrLines) ? rowOrLines : (rowOrLines && Array.isArray(rowOrLines.discardedLines) ? rowOrLines.discardedLines : []);
+      if (!Array.isArray(lines)) {
+        return [];
+      }
+      const blacklisted = new Set(
+        rowOrLines && !Array.isArray(rowOrLines) && Array.isArray(rowOrLines.blacklistedCodes)
+          ? rowOrLines.blacklistedCodes
+          : []
+      );
+      return lines.filter((line) => {
+        if (typeof line !== 'string' || line.includes('*')) {
+          return false;
+        }
+        const chip = extractChipFromDiscardedLine(line);
+        return !chip || !blacklisted.has(chip);
+      });
+    }
+
+    function extractChipFromDiscardedLine(line) {
+      const raw = (line || '').trim();
+      if (!raw || raw.includes('*')) {
+        return null;
+      }
+      const separator = raw.includes('\t') ? '\t' : ';';
+      const chip = raw.split(separator)[0].replaceAll('"', '').trim();
+      if (!chip || chip.includes('*')) {
+        return null;
+      }
+      return chip;
+    }
+
+    function collectUnknownChips(rows) {
+      const counter = new Map();
+      (rows || []).forEach((row) => {
+        visibleDiscardedLines(row).forEach((line) => {
+          const chip = extractChipFromDiscardedLine(line);
+          if (!chip) {
+            return;
+          }
+          counter.set(chip, (counter.get(chip) || 0) + 1);
+        });
+      });
+      return Array.from(counter.entries())
+        .map(([chip, count]) => ({ chip, count }))
+        .sort((a, b) => a.chip.localeCompare(b.chip));
+    }
+
+    function openUnknownChipsModal(rows) {
+      unknownChipsModalBody.innerHTML = '';
+      const chips = collectUnknownChips(rows);
+      if (chips.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="3" class="text-center text-muted py-3">No unknown chips</td>';
+        unknownChipsModalBody.appendChild(tr);
+      } else {
+        chips.forEach((entry, index) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${index + 1}</td><td>${entry.chip}</td><td>${entry.count}</td>`;
+          unknownChipsModalBody.appendChild(tr);
+        });
+      }
+      unknownChipsModal.show();
+    }
+
+    function applyRowUpdate(updatedRow) {
+      if (!updatedRow || !updatedRow.rowId) {
+        return;
+      }
+      const index = currentRows.findIndex((row) => row.rowId === updatedRow.rowId);
+      if (index >= 0) {
+        currentRows[index] = updatedRow;
+      } else {
+        currentRows.push(updatedRow);
+      }
+      renderRows(currentRows);
+    }
+
+    async function callSync() {
+      const eventId = getEventId();
+      if (!eventId) {
+        throw new Error('Missing eventId');
+      }
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/sync`, { method: 'POST' });
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Error during sync');
+      }
+      return response.json();
+    }
+
+    async function loadRrOpenUrl() {
+      const eventId = getEventId();
+      if (!eventId) {
+        throw new Error('Missing eventId');
+      }
+      const response = await fetch(`/api/auth/rr-open-url/${encodeURIComponent(eventId)}`);
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Error building RR URL');
+      }
+      return response.json();
+    }
+
+    async function loadTimingPoints() {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/timing-points`);
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (response.status === 409) {
+        throw new Error('No session data available. Run SYNC first.');
+      }
+      if (!response.ok) {
+        throw new Error('Error loading timing points');
+      }
+      return response.json();
+    }
+
+    async function loadBibChip() {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/bib-chip`);
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (response.status === 409) {
+        throw new Error('No session data available. Run SYNC first.');
+      }
+      if (!response.ok) {
+        throw new Error('Error loading BIB-CHIP');
+      }
+      return response.json();
+    }
+
+    async function loadRows() {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows`);
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Error loading rows');
+      }
+      return response.json();
+    }
+
+    async function loadRowFileContent(rowId) {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowId)}/content`);
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || 'Error loading file content');
+      }
+      return response.text();
+    }
+
+    function extractChipFromPassingLine(line) {
+      const raw = (line || '').trim();
+      if (!raw || raw.includes('*')) {
+        return null;
+      }
+      const separator = raw.includes('\t') ? '\t' : ';';
+      const chip = raw.split(separator)[0].replaceAll('"', '').trim();
+      return chip || null;
+    }
+
+    function buildBibChipNameMap(data) {
+      const map = new Map();
+      (data && Array.isArray(data.rows) ? data.rows : []).forEach((row) => {
+        const chip = (row && row.chip ? String(row.chip).trim() : '');
+        if (!chip) {
+          return;
+        }
+        const lastName = row && row.lastName ? String(row.lastName).trim() : '';
+        const firstName = row && row.firstName ? String(row.firstName).trim() : '';
+        const athlete = `${lastName} ${firstName}`.trim();
+        map.set(chip, athlete);
+      });
+      return map;
+    }
+
+    function renderBlacklistRows(rows) {
+      blacklistModalBody.innerHTML = '';
+      const entries = (rows || []).flatMap((row) => {
+        const source = extractFileName(row && row.source ? row.source : '');
+        const rowId = row && row.rowId ? row.rowId : '';
+        const codes = Array.isArray(row && row.blacklistedCodes) ? row.blacklistedCodes : [];
+        return codes
+          .map((code) => (code == null ? '' : String(code).trim()))
+          .filter((code) => code)
+          .map((code) => ({ rowId, source, code }));
+      }).sort((a, b) => {
+        const sourceCompare = a.source.localeCompare(b.source);
+        if (sourceCompare !== 0) {
+          return sourceCompare;
+        }
+        return a.code.localeCompare(b.code);
+      });
+      if (entries.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="5" class="text-center text-muted py-3">Blacklist is empty</td>';
+        blacklistModalBody.appendChild(tr);
+        return;
+      }
+      entries.forEach((entry, index) => {
+        const { rowId, source, code } = entry;
+        const athlete = blacklistNameMap.get(code) || '';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${escapeHtml(source)}</td>
+          <td><code>${escapeHtml(code)}</code></td>
+          <td>${escapeHtml(athlete)}</td>
+          <td><button type="button" class="btn btn-sm btn-outline-success blacklist-restore-btn" data-row-id="${escapeHtml(rowId)}" data-code="${escapeHtml(code)}">Restore</button></td>
+        `;
+        const restoreBtn = tr.querySelector('.blacklist-restore-btn');
+        restoreBtn.addEventListener('click', async () => {
+          const selectedCode = restoreBtn.getAttribute('data-code') || '';
+          const selectedRowId = restoreBtn.getAttribute('data-row-id') || '';
+          if (!selectedRowId || !selectedCode) {
+            return;
+          }
+          try {
+            const rowsAfterRestore = await removeBlacklistCode(selectedRowId, selectedCode);
+            currentRows = Array.isArray(rowsAfterRestore) ? [...rowsAfterRestore] : currentRows;
+            renderRows(currentRows);
+            renderBlacklistRows(currentRows);
+            appendWsMessage(`Code restored from blacklist: ${selectedCode}`);
+          } catch (error) {
+            appendWsMessage(error.message);
+          }
+        });
+        blacklistModalBody.appendChild(tr);
+      });
+    }
+
+    async function openBlacklistModal() {
+      blacklistSubtitle.textContent = 'All blacklisted codes for current event';
+      blacklistModalBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Loading...</td></tr>';
+      blacklistModal.show();
+      const bibChipData = await loadBibChip().catch(() => ({ rows: [] }));
+      blacklistNameMap = buildBibChipNameMap(bibChipData);
+      renderBlacklistRows(currentRows);
+    }
+
+    async function openCycleDetailsModal(row, kind, cycleIndex) {
+      const isSent = kind === 'sent';
+      const details = isSent
+        ? (Array.isArray(row && row.sentCycleDetails) ? row.sentCycleDetails : [])
+        : (Array.isArray(row && row.downloadCycleDetails) ? row.downloadCycleDetails : []);
+      const deltaValues = isSent
+        ? (Array.isArray(row && row.sentDeltas) ? row.sentDeltas : [])
+        : (Array.isArray(row && row.downloadDeltas) ? row.downloadDeltas : []);
+      const cycleLines = Number.isInteger(cycleIndex) && cycleIndex >= 0 && cycleIndex < details.length ? details[cycleIndex] : [];
+      const cycleValue = Number.isInteger(cycleIndex) && cycleIndex >= 0 && cycleIndex < deltaValues.length ? deltaValues[cycleIndex] : 0;
+      cycleDetailsTitle.textContent = `${isSent ? 'Sent' : 'Downloaded'} cycle details`;
+      cycleDetailsSubtitle.textContent = `${extractFileName(row && row.source ? row.source : '')} · cycle ${cycleIndex + 1} · ${cycleValue} rows`;
+      cycleDetailsBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Loading...</td></tr>';
+      cycleDetailsModal.show();
+      const bibChipData = await loadBibChip().catch(() => ({ rows: [] }));
+      const nameMap = buildBibChipNameMap(bibChipData);
+      const rows = Array.isArray(cycleLines) ? cycleLines : [];
+      cycleDetailsBody.innerHTML = '';
+      if (rows.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="3" class="text-center text-muted py-3">No rows in this cycle</td>';
+        cycleDetailsBody.appendChild(tr);
+        return;
+      }
+      rows.forEach((line, index) => {
+        const chip = extractChipFromPassingLine(line);
+        const athlete = chip ? (nameMap.get(chip) || '') : '';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${index + 1}</td><td><code>${escapeHtml(line || '')}</code></td><td>${escapeHtml(athlete)}</td>`;
+        cycleDetailsBody.appendChild(tr);
+      });
+    }
+
+    function renderSourceContentRows() {
+      sourceContentBody.innerHTML = '';
+      const orderedRows = sourceContentNewestFirst
+        ? [...sourceContentRows].reverse()
+        : [...sourceContentRows];
+      sourceContentOrderBtn.textContent = sourceContentNewestFirst ? 'Newest' : 'Oldest';
+      const filter = sourceContentFilter.trim().toLowerCase();
+      const rows = orderedRows.filter((line) => {
+        const code = extractChipFromPassingLine(line);
+        if (code && sourceContentBlacklistedCodes.has(code)) {
+          return false;
+        }
+        if (!filter) {
+          return true;
+        }
+        const chip = code || extractChipFromPassingLine(line);
+        const athlete = chip ? (sourceContentNameMap.get(chip) || '') : '';
+        return line.toLowerCase().includes(filter) || athlete.toLowerCase().includes(filter);
+      });
+
+      if (rows.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="3" class="text-center text-muted py-3">No matching rows</td>';
+        sourceContentBody.appendChild(tr);
+        return;
+      }
+
+      rows.forEach((line) => {
+        const chip = extractChipFromPassingLine(line);
+        const athlete = chip ? (sourceContentNameMap.get(chip) || '') : '';
+        const tr = document.createElement('tr');
+        const actionCell = chip
+          ? `<button type="button" class="btn btn-sm btn-outline-danger blacklist-code-btn" data-code="${escapeHtml(chip)}">Black list</button>`
+          : '';
+        tr.innerHTML = `<td><code>${escapeHtml(line)}</code></td><td>${escapeHtml(athlete || '')}</td><td>${actionCell}</td>`;
+        const blacklistBtn = tr.querySelector('.blacklist-code-btn');
+        if (blacklistBtn) {
+          blacklistBtn.addEventListener('click', async () => {
+            const code = blacklistBtn.getAttribute('data-code') || '';
+            if (!sourceContentRowId || !code) {
+              return;
+            }
+            try {
+              const rowsAfterBlacklist = await blacklistCode(sourceContentRowId, code);
+              currentRows = Array.isArray(rowsAfterBlacklist) ? [...rowsAfterBlacklist] : currentRows;
+              const updatedRow = currentRows.find((row) => row.rowId === sourceContentRowId);
+              sourceContentBlacklistedCodes = new Set(updatedRow && Array.isArray(updatedRow.blacklistedCodes) ? updatedRow.blacklistedCodes : []);
+              renderRows(currentRows);
+              renderSourceContentRows();
+              appendWsMessage(`Code blacklisted: ${code}`);
+            } catch (error) {
+              appendWsMessage(error.message);
+            }
+          });
+        }
+        sourceContentBody.appendChild(tr);
+      });
+    }
+
+    async function openSourceContentModal(rowId, source) {
+      sourceContentTitle.textContent = `File content - ${extractFileName(source || '')}`;
+      sourceContentSubtitle.textContent = source || '';
+      sourceContentBody.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-3">Loading...</td></tr>';
+      sourceContentModal.show();
+      const [content, bibChipData] = await Promise.all([
+        loadRowFileContent(rowId),
+        loadBibChip().catch(() => ({ rows: [] }))
+      ]);
+      sourceContentRows = String(content || '')
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line && !line.includes('*'));
+      sourceContentNameMap = buildBibChipNameMap(bibChipData);
+      sourceContentRowId = rowId;
+      const currentRow = currentRows.find((row) => row.rowId === rowId);
+      sourceContentBlacklistedCodes = new Set(currentRow && Array.isArray(currentRow.blacklistedCodes) ? currentRow.blacklistedCodes : []);
+      sourceContentNewestFirst = true;
+      sourceContentFilter = '';
+      sourceContentFilterInput.value = '';
+      renderSourceContentRows();
+    }
+
+    async function saveFilePassaggi() {
+      const eventId = getEventId();
+      const source = filePassaggiSourceInput.value.trim();
+      const timingPoint = filePassaggiTpSelect.value;
+      const syncOffset = filePassaggiSyncInput.value.trim();
+      const scaricaOgniSec = Number(filePassaggiScaricaOgniInput.value || 60);
+      if (!source) {
+        throw new Error('Enter URL or local file path');
+      }
+      if (!timingPoint) {
+        throw new Error('Select a timing point');
+      }
+      if (!/^[+-]\d{2}:\d{2}:\d{2}\.\d{3}$/.test(syncOffset)) {
+        throw new Error('Sync offset format must be +/- hh:mm:ss.sss');
+      }
+      if (!Number.isFinite(scaricaOgniSec) || scaricaOgniSec <= 0) {
+        throw new Error('"Download every" value is not valid');
+      }
+
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/file-passaggi`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source, timingPoint, syncOffset, scaricaOgniSec })
+      });
+
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (response.status === 400) {
+        throw new Error('Invalid input data');
+      }
+      if (!response.ok) {
+        throw new Error('Error while saving passings file');
+      }
+
+      return response.json();
+    }
+
+    async function deleteRow(rowId) {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowId)}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) {
+        throw new Error('Error deleting row');
+      }
+      return response.json();
+    }
+
+    async function duplicateRow(rowId) {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowId)}/duplicate`, {
+        method: 'POST'
+      });
+      if (!response.ok) {
+        throw new Error('Error duplicating row');
+      }
+      return response.json();
+    }
+
+    async function blacklistCode(rowId, code) {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowId)}/blacklist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(code)
+      });
+      if (!response.ok) {
+        throw new Error('Error adding code to blacklist');
+      }
+      return response.json();
+    }
+
+    async function removeBlacklistCode(rowId, code) {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowId)}/blacklist`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(code)
+      });
+      if (!response.ok) {
+        throw new Error('Error removing code from blacklist');
+      }
+      return response.json();
+    }
+
+    async function deleteAllRows() {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) {
+        throw new Error('Error deleting rows');
+      }
+      return response.json();
+    }
+
+    async function applyRowAction(rowId, action) {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowId)}/actions/${encodeURIComponent(action)}`, {
+        method: 'POST'
+      });
+      if (!response.ok) {
+        throw new Error('Error on row action');
+      }
+      return response.json();
+    }
+
+    async function applyGlobalAction(action) {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/actions/${encodeURIComponent(action)}`, {
+        method: 'POST'
+      });
+      if (!response.ok) {
+        throw new Error('Error on global action');
+      }
+      return response.json();
+    }
+
+    async function updateRowTimingPoint(rowId, source, timingPoint, scaricaOgniSec, syncOffset) {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowId)}/timing-point`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source, timingPoint, scaricaOgniSec, syncOffset })
+      });
+      if (!response.ok) {
+        throw new Error('Error updating timing point');
+      }
+      return response.json();
+    }
+
+    function renderTimingPointModal(data) {
+      tpModalBody.innerHTML = '';
+      (data.timingPoints || []).forEach((tp, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${index + 1}</td><td>${tp}</td>`;
+        tpModalBody.appendChild(tr);
+      });
+      tpModal.show();
+    }
+
+    function renderBibChipModal(data) {
+      bibChipModalBody.innerHTML = '';
+      (data.rows || []).forEach((row) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${row.chip || ''}</td><td>${row.bib ?? ''}</td><td>${row.lastName || ''}</td><td>${row.firstName || ''}</td>`;
+        bibChipModalBody.appendChild(tr);
+      });
+      bibChipModal.show();
+    }
+
+    async function openFilePassaggiModal() {
+      const tpData = await loadTimingPoints();
+      filePassaggiTpSelect.innerHTML = '';
+      (tpData.timingPoints || []).forEach((tp) => {
+        const option = document.createElement('option');
+        option.value = tp;
+        option.textContent = tp;
+        filePassaggiTpSelect.appendChild(option);
+      });
+      if (!filePassaggiTpSelect.value) {
+        throw new Error('No timing points available. Run SYNC first.');
+      }
+
+      filePassaggiSourceInput.value = '';
+      filePassaggiSyncInput.value = '+00:00:00.000';
+      filePassaggiScaricaOgniInput.value = '60';
+      filePassaggiModal.show();
+    }
+
+    async function openEditTimingPointModal(rowId, currentSource, currentTimingPoint, currentScaricaOgniSec, currentSyncOffset) {
+      const tpData = await loadTimingPoints();
+      editTpSelect.innerHTML = '';
+      (tpData.timingPoints || []).forEach((tp) => {
+        const option = document.createElement('option');
+        option.value = tp;
+        option.textContent = tp;
+        editTpSelect.appendChild(option);
+      });
+      if (!editTpSelect.value) {
+        throw new Error('No timing points available. Run SYNC first.');
+      }
+
+      if (currentTimingPoint) {
+        editTpSelect.value = currentTimingPoint;
+      }
+      editSourceInput.value = currentSource || '';
+      editSyncInput.value = currentSyncOffset || '+00:00:00.000';
+      editScaricaOgniInput.value = (currentScaricaOgniSec && currentScaricaOgniSec > 0) ? currentScaricaOgniSec : 60;
+      editingRowId = rowId;
+      editTimingPointModal.show();
+    }
+
+    function connectWebSocket() {
+      const socket = new SockJS('/ws');
+      const client = new StompJs.Client({
+        webSocketFactory: () => socket,
+        reconnectDelay: 5000,
+        onConnect: () => {
+          setWsStatus('Connected', 'text-bg-success');
+          appendWsMessage('WebSocket connection active');
+
+          client.subscribe('/topic/messages', (message) => {
+            try {
+              const payload = JSON.parse(message.body);
+              appendWsMessage(`${payload.sender}: ${payload.content}`);
+            } catch (_error) {
+              appendWsMessage(`Invalid message payload: ${message.body}`);
+            }
+          });
+
+          client.subscribe('/topic/gare-updates', (message) => {
+            try {
+              const payload = JSON.parse(message.body);
+              if (!payload || payload.eventId !== getEventId() || !payload.row) {
+                return;
+              }
+              applyRowUpdate(payload.row);
+            } catch (_error) {
+            }
+          });
+        },
+        onStompError: () => {
+          setWsStatus('Error', 'text-bg-danger');
+        },
+        onWebSocketClose: () => {
+          setWsStatus('Disconnected', 'text-bg-secondary');
+        }
+      });
+      client.activate();
+    }
+
+    backToMenuBtn.addEventListener('click', () => {
+      window.location.href = '/dashboard.html';
+    });
+
+    syncBtn.addEventListener('click', async () => {
+      try {
+        const data = await callSync();
+        renderSync(data);
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    btnOpenRr.addEventListener('click', async () => {
+      try {
+        const data = await loadRrOpenUrl();
+        if (!data || !data.url) {
+          throw new Error('RR URL is empty');
+        }
+        window.open(data.url, '_blank', 'noopener,noreferrer');
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    btnTp.addEventListener('click', async () => {
+      try {
+        const data = await loadTimingPoints();
+        renderTimingPointModal(data);
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    btnBibChip.addEventListener('click', async () => {
+      try {
+        const data = await loadBibChip();
+        renderBibChipModal(data);
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    btnScarti.addEventListener('click', () => {
+      const aggregated = currentRows.flatMap((row) => visibleDiscardedLines(row).map((line) => ({ line })));
+      openDiscardedModal({ discardedLines: aggregated.map((entry) => entry.line) });
+    });
+
+    btnBlacklist.addEventListener('click', async () => {
+      try {
+        await openBlacklistModal();
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    btnUnknownChips.addEventListener('click', () => {
+      openUnknownChipsModal(currentRows);
+    });
+
+    btnAddFilePassaggi.addEventListener('click', async () => {
+      try {
+        await openFilePassaggiModal();
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    btnRrLive.addEventListener('click', () => {
+      const eventId = getEventId();
+      window.location.href = eventId
+        ? `/rr-live.html?eventId=${encodeURIComponent(eventId)}`
+        : '/rr-live.html';
+    });
+
+    btnLivePage.addEventListener('click', () => {
+      window.open('https://www.icron.it/services/live/', '_blank', 'noopener,noreferrer');
+    });
+
+    sourceContentOrderBtn.addEventListener('click', () => {
+      sourceContentNewestFirst = !sourceContentNewestFirst;
+      renderSourceContentRows();
+    });
+
+    sourceContentFilterInput.addEventListener('input', () => {
+      sourceContentFilter = sourceContentFilterInput.value || '';
+      renderSourceContentRows();
+    });
+
+    messagesToggleBtn.addEventListener('click', () => {
+      setMessagesCollapsed(!messagesPanel.classList.contains('is-collapsed'));
+    });
+
+    saveFilePassaggiBtn.addEventListener('click', async () => {
+      try {
+        const rows = await saveFilePassaggi();
+        renderRows(rows);
+        filePassaggiModal.hide();
+        appendWsMessage('Passings file added');
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    saveEditTpBtn.addEventListener('click', async () => {
+      if (!editingRowId) {
+        return;
+      }
+      const source = editSourceInput.value.trim();
+      const scaricaOgniSec = Number(editScaricaOgniInput.value || 60);
+      const syncOffset = editSyncInput.value.trim();
+      if (!source) {
+        appendWsMessage('Source is required');
+        return;
+      }
+      if (!Number.isFinite(scaricaOgniSec) || scaricaOgniSec <= 0) {
+        appendWsMessage('"Download every" value is not valid');
+        return;
+      }
+      if (!/^[+-]\d{2}:\d{2}:\d{2}\.\d{3}$/.test(syncOffset)) {
+        appendWsMessage('Sync offset format must be +/- hh:mm:ss.sss');
+        return;
+      }
+      try {
+        const rows = await updateRowTimingPoint(editingRowId, source, editTpSelect.value, scaricaOgniSec, syncOffset);
+        renderRows(rows);
+        editTimingPointModal.hide();
+        appendWsMessage('Timing point updated');
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    startAllBtn.addEventListener('click', async () => {
+      try {
+        const rows = await applyGlobalAction('start');
+        renderRows(rows);
+        appendWsMessage('Global action: start');
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    stopAllBtn.addEventListener('click', async () => {
+      try {
+        const rows = await applyGlobalAction('stop');
+        renderRows(rows);
+        appendWsMessage('Global action: stop');
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    rewindAllBtn.addEventListener('click', async () => {
+      try {
+        const rows = await applyGlobalAction('rewind');
+        renderRows(rows);
+        appendWsMessage('Global action: rewind');
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    deleteAllBtn.addEventListener('click', async () => {
+      const ok = window.confirm('Confirm deletion of all rows?');
+      if (!ok) {
+        return;
+      }
+      try {
+        const rows = await deleteAllRows();
+        renderRows(rows);
+        appendWsMessage('All rows deleted');
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    (async function init() {
+      if (!requireLogin()) {
+        return;
+      }
+
+      setMessagesCollapsed(localStorage.getItem('rr.messagesCollapsed') === '1');
+      startKeepAlive();
+      loadEventMeta();
+      resetView();
+      try {
+        await keepSessionAlive(true);
+        const data = await callSync();
+        renderSync(data);
+        const rows = await loadRows();
+        renderRows(rows);
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+
+      connectWebSocket();
+      setInterval(refreshElapsedDisplays, 5000);
+    })();
+  </script>
+</body>
+</html>
