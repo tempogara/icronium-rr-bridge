@@ -65,12 +65,13 @@
     }
     .totals-box {
       display: grid;
-      grid-template-columns: repeat(4, minmax(58px, auto));
-      gap: 6px;
-      min-width: 272px;
+      grid-template-columns: repeat(4, minmax(88px, 1fr));
+      gap: 10px;
+      min-width: 460px;
+      max-width: 640px;
     }
     .totals-head {
-      font-size: 0.74rem;
+      font-size: 0.9rem;
       font-weight: 700;
       color: #6c757d;
       text-align: center;
@@ -81,10 +82,10 @@
       border: 1px solid #d6dae0;
       border-radius: 4px;
       background: #f8f9fb;
-      padding: 8px 10px;
+      padding: 12px 14px;
       text-align: center;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 1rem;
+      font-size: 1.25rem;
       font-weight: 700;
       color: #212529;
       min-width: 0;
@@ -104,8 +105,8 @@
     }
     .totals-button {
       width: 100%;
-      padding: 8px 10px;
-      font-size: 1rem;
+      padding: 12px 14px;
+      font-size: 1.25rem;
       font-weight: 700;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       line-height: 1.2;
@@ -129,72 +130,6 @@
       background: #0d6efd;
       border-color: #0b5ed7;
       color: #ffffff;
-    }
-    .source-stack {
-      display: grid;
-      gap: 4px;
-      min-width: 260px;
-    }
-    .source-line {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      border-bottom: 1px dashed #e1e4e8;
-      padding-bottom: 4px;
-    }
-    .source-line:last-child {
-      border-bottom: 0;
-      padding-bottom: 0;
-    }
-    .source-name {
-      font-size: 0.92rem;
-      color: #212529;
-      word-break: break-word;
-    }
-    .source-name-wrap {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      min-width: 0;
-    }
-    .source-icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 20px;
-      height: 20px;
-      border-radius: 999px;
-      color: #ffffff;
-      font-size: 0.68rem;
-      font-weight: 700;
-      flex: 0 0 auto;
-    }
-    .source-local { background: #198754; }
-    .source-lan { background: #fd7e14; }
-    .source-web { background: #0d6efd; }
-    .row-status {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 82px;
-      padding: 3px 8px;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.03em;
-    }
-    .row-status-running {
-      background: #1f9d55;
-      color: #ffffff;
-    }
-    .row-status-stopped {
-      background: #d64545;
-      color: #ffffff;
-    }
-    .row-status-error {
-      background: #f2c94c;
-      color: #1f2327;
     }
     .mono {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -246,7 +181,6 @@
             <thead class="table-light">
               <tr>
                 <th>Timing point</th>
-                <th>Sources</th>
                 <th>Totals</th>
               </tr>
             </thead>
@@ -560,17 +494,6 @@
       return chunks[chunks.length - 1] || value;
     }
 
-    function detectSourceType(source) {
-      const value = (source || '').trim().toLowerCase();
-      if (value.includes('192.168.')) {
-        return 'lan';
-      }
-      if (value.startsWith('http://') || value.startsWith('https://')) {
-        return 'web';
-      }
-      return 'local';
-    }
-
     function extractChipFromPassingLine(line) {
       const raw = (line || '').trim();
       if (!raw || raw.includes('*')) {
@@ -634,21 +557,6 @@
         .sort((a, b) => a.timingPoint.localeCompare(b.timingPoint));
     }
 
-    function renderSourceList(rows) {
-      return `<div class="source-stack">${(rows || []).map((row) => {
-        const stato = row.stato || 'Stopped';
-        const statoLower = stato.toLowerCase();
-        const isRunning = statoLower === 'running' || statoLower === 'error';
-        const isError = !!row.errorState;
-        const statusClass = isError ? 'row-status-error' : (isRunning ? 'row-status-running' : 'row-status-stopped');
-        const statusText = isError ? 'ERROR' : (isRunning ? 'RUNNING' : 'STOPPED');
-        const type = detectSourceType(row && row.source ? row.source : '');
-        const iconClass = type === 'local' ? 'source-local' : (type === 'lan' ? 'source-lan' : 'source-web');
-        const iconText = type === 'local' ? 'L' : (type === 'lan' ? 'N' : 'W');
-        return `<div class="source-line"><span class="source-name-wrap"><span class="source-icon ${iconClass}">${iconText}</span><span class="source-name">${escapeHtml(extractFileName(row.source || ''))}</span></span><span class="row-status ${statusClass}">${statusText}</span></div>`;
-      }).join('')}</div>`;
-    }
-
     function renderTotals(group) {
       const read = (group.rows || []).reduce((sum, row) => sum + (Number(row && row.righeFile) || 0), 0);
       const sent = (group.rows || []).reduce((sum, row) => sum + (Number(row && row.righePo) || 0), 0);
@@ -698,7 +606,7 @@
       tpViewBody.innerHTML = '';
       if (groups.length === 0) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="3" class="text-center text-muted py-4">No timing point data</td>';
+        tr.innerHTML = '<td colspan="2" class="text-center text-muted py-4">No timing point data</td>';
         tpViewBody.appendChild(tr);
         return;
       }
@@ -706,7 +614,6 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="fw-semibold">${escapeHtml(group.timingPoint)}</td>
-          <td>${renderSourceList(group.rows)}</td>
           <td>${renderTotals(group)}</td>
         `;
         const readBtn = tr.querySelector('.show-tp-read-btn');
