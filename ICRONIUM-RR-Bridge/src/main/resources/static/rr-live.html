@@ -80,6 +80,7 @@
           <img src="/images/open-rr.png" alt="" style="width:18px;height:18px;border-radius:3px;">
           <span>Open RR</span>
         </button>
+        <button id="toTpViewBtn" class="btn btn-sm btn-outline-secondary" type="button">TP View</button>
         <button id="toDashboardBtn" class="btn btn-sm btn-outline-primary" type="button">Dashboard</button>
         <button id="toDetailBtn" class="btn btn-sm btn-outline-primary" type="button">Race detail</button>
       </div>
@@ -174,6 +175,7 @@
     const lastSync = document.getElementById('lastSync');
     const toDashboardBtn = document.getElementById('toDashboardBtn');
     const toDetailBtn = document.getElementById('toDetailBtn');
+    const toTpViewBtn = document.getElementById('toTpViewBtn');
     const openIcronLiveBtn = document.getElementById('openIcronLiveBtn');
     const globalPlayBtn = document.getElementById('globalPlayBtn');
     const globalStopBtn = document.getElementById('globalStopBtn');
@@ -561,6 +563,14 @@
         return;
       }
       window.location.href = `/gara-dettaglio.html?eventId=${encodeURIComponent(eventId)}`;
+    });
+
+    toTpViewBtn.addEventListener('click', () => {
+      const eventId = currentEventId();
+      if (!eventId) {
+        return;
+      }
+      window.location.href = `/timingpointView.html?eventId=${encodeURIComponent(eventId)}`;
     });
 
     openIcronLiveBtn.addEventListener('click', () => {

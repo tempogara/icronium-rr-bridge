@@ -77,26 +77,26 @@
 
     .delta-grid {
       display: grid;
-      grid-template-columns: repeat(10, minmax(42px, 1fr));
-      gap: 4px;
-      min-width: 460px;
+      grid-template-columns: repeat(10, minmax(34px, 1fr));
+      gap: 3px;
+      min-width: 378px;
     }
 
     .delta-group {
       display: grid;
-      gap: 4px;
-      min-width: 520px;
+      gap: 3px;
+      min-width: 430px;
     }
 
     .delta-row-wrap {
       display: grid;
-      grid-template-columns: 58px 1fr;
+      grid-template-columns: 42px 1fr;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
     }
 
     .delta-label {
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       font-weight: 700;
       color: #495057;
       text-transform: uppercase;
@@ -105,9 +105,9 @@
 
     .totals-box {
       display: grid;
-      grid-template-columns: repeat(3, minmax(38px, auto));
+      grid-template-columns: repeat(4, minmax(38px, auto));
       gap: 3px;
-      min-width: 126px;
+      min-width: 168px;
     }
 
     .totals-head {
@@ -131,6 +131,20 @@
       color: #212529;
       min-width: 0;
       line-height: 1.1;
+    }
+
+    .totals-value-btn {
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      line-height: inherit;
+    }
+
+    .totals-value-btn:hover {
+      text-decoration: underline;
     }
 
     .totals-button {
@@ -160,13 +174,20 @@
       color: #ffffff;
     }
 
+    .totals-blue {
+      background: #0d6efd;
+      border-color: #0b5ed7;
+      color: #ffffff;
+    }
+
     .delta-cell {
       border: 1px solid #d6dae0;
       border-radius: 4px;
       background: #f8f9fb;
-      padding: 2px 4px;
+      padding: 3px 6px;
       text-align: center;
-      font-size: 0.8rem;
+      font-size: 0.74rem;
+      line-height: 1.1;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
 
@@ -177,7 +198,7 @@
       background: transparent;
       color: inherit;
       font: inherit;
-      line-height: inherit;
+      line-height: 1.1;
     }
 
     .delta-cell-btn:hover {
@@ -334,6 +355,7 @@
           <span>Open RR</span>
         </button>
         <button id="btnRrLive" class="btn btn-sm btn-outline-secondary" type="button">RR Live</button>
+        <button id="btnTpView" class="btn btn-sm btn-outline-secondary" type="button">TP View</button>
         <button id="backToMenuBtn" class="btn btn-sm btn-outline-primary" type="button">Dashboard</button>
       </div>
     </div>
@@ -379,6 +401,7 @@
                     <button id="deleteAllBtn" class="btn action-btn btn-sm mini-btn">🗑</button>
                   </div>
                 </th>
+                <th>Status</th>
                 <th>Source</th>
                 <th>Timing point</th>
                 <th>Last download</th>
@@ -660,6 +683,45 @@
     </div>
   </div>
 
+  <div class="modal fade" id="uniqueChipsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 id="uniqueChipsTitle" class="modal-title">Unique chips</h5>
+            <div id="uniqueChipsSubtitle" class="small text-muted mt-1"></div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="table-responsive" style="max-height: 65vh;">
+            <table class="table table-striped table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 80px;">#</th>
+                  <th style="width: 180px;">
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                      <span>Timestamp</span>
+                      <button id="uniqueChipsOrderBtn" type="button" class="btn btn-sm btn-outline-secondary source-content-toggle">Newest</button>
+                    </div>
+                  </th>
+                  <th style="width: 180px;">Chip</th>
+                  <th style="width: 35%;">Athlete</th>
+                </tr>
+                <tr>
+                  <th colspan="4">
+                    <input id="uniqueChipsFilterInput" type="text" class="form-control form-control-sm source-content-filter" placeholder="Filter chip or athlete">
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="uniqueChipsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -682,6 +744,7 @@
     const btnAddFilePassaggi = document.getElementById('btnAddFilePassaggi');
     const btnOpenRr = document.getElementById('btnOpenRr');
     const btnRrLive = document.getElementById('btnRrLive');
+    const btnTpView = document.getElementById('btnTpView');
     const btnLivePage = document.getElementById('btnLivePage');
     const saveFilePassaggiBtn = document.getElementById('saveFilePassaggiBtn');
     const filePassaggiSourceInput = document.getElementById('filePassaggiSourceInput');
@@ -712,6 +775,11 @@
     const cycleDetailsTitle = document.getElementById('cycleDetailsTitle');
     const cycleDetailsSubtitle = document.getElementById('cycleDetailsSubtitle');
     const cycleDetailsBody = document.getElementById('cycleDetailsBody');
+    const uniqueChipsTitle = document.getElementById('uniqueChipsTitle');
+    const uniqueChipsSubtitle = document.getElementById('uniqueChipsSubtitle');
+    const uniqueChipsBody = document.getElementById('uniqueChipsBody');
+    const uniqueChipsOrderBtn = document.getElementById('uniqueChipsOrderBtn');
+    const uniqueChipsFilterInput = document.getElementById('uniqueChipsFilterInput');
     const messagesPanel = document.getElementById('messagesPanel');
     const messagesLog = document.getElementById('messagesLog');
     const messagesToggleBtn = document.getElementById('messagesToggleBtn');
@@ -725,6 +793,7 @@
     const unknownChipsModal = new bootstrap.Modal(document.getElementById('unknownChipsModal'));
     const blacklistModal = new bootstrap.Modal(document.getElementById('blacklistModal'));
     const cycleDetailsModal = new bootstrap.Modal(document.getElementById('cycleDetailsModal'));
+    const uniqueChipsModal = new bootstrap.Modal(document.getElementById('uniqueChipsModal'));
     let editingRowId = null;
     let currentRows = [];
     let sourceContentRows = [];
@@ -733,6 +802,9 @@
     let sourceContentFilter = '';
     let sourceContentRowId = null;
     let sourceContentBlacklistedCodes = new Set();
+    let uniqueChipsRows = [];
+    let uniqueChipsNewestFirst = true;
+    let uniqueChipsFilter = '';
     let blacklistNameMap = new Map();
     let keepAliveTimerId = null;
 
@@ -897,6 +969,8 @@
               <button class="btn btn-sm action-btn row-action" data-action="rewind" nowrap>|◀</button>
               <button class="btn btn-sm action-btn row-action" data-action="delete">🗑</button>
             </div>
+          </td>
+          <td>
             <div class="row-status ${isError ? 'row-status-error' : (isRunning ? 'row-status-running' : 'row-status-stopped')}" title="${row.lastErrorMessage || ''}">${isError ? 'ERROR' : (isRunning ? 'RUNNING' : 'STOPPED')}</div>
           </td>
           <td>${renderSourceCell(row)}</td>
@@ -929,6 +1003,26 @@
           showSourceBtn.addEventListener('click', async () => {
             try {
               await openSourceContentModal(tr.dataset.rowId, row.source || '');
+            } catch (error) {
+              appendWsMessage(error.message);
+            }
+          });
+        }
+        const showReadContentBtn = tr.querySelector('.show-read-content-btn');
+        if (showReadContentBtn) {
+          showReadContentBtn.addEventListener('click', async () => {
+            try {
+              await openSourceContentModal(tr.dataset.rowId, row.source || '');
+            } catch (error) {
+              appendWsMessage(error.message);
+            }
+          });
+        }
+        const showUniqueChipsBtn = tr.querySelector('.show-unique-chips-btn');
+        if (showUniqueChipsBtn) {
+          showUniqueChipsBtn.addEventListener('click', async () => {
+            try {
+              await openUniqueChipsModal(row);
             } catch (error) {
               appendWsMessage(error.message);
             }
@@ -1154,6 +1248,7 @@
       const read = Number.isFinite(Number(row && row.righeFile)) ? Number(row.righeFile) : 0;
       const sent = Number.isFinite(Number(row && row.righePo)) ? Number(row.righePo) : 0;
       const discarded = visibleDiscardedLines(row).length;
+      const unique = countUniqueChips(row);
       const readClass = read > 0 ? 'totals-value totals-green' : 'totals-value';
       let sentClass = 'totals-value totals-red';
       if (sent > 0 && sent < read) {
@@ -1161,6 +1256,7 @@
       } else if (sent > 0 && sent === read) {
         sentClass = 'totals-value totals-green';
       }
+      const uniqueClass = unique > 0 ? 'totals-value totals-blue' : 'totals-value';
       const discardedBtnClass = read > 0 && (discarded / read) > 0.10
         ? 'btn btn-sm btn-danger totals-button show-discarded-btn'
         : (discarded > 0
@@ -1170,10 +1266,26 @@
         <span class="totals-head">READ</span>
         <span class="totals-head">SENT</span>
         <span class="totals-head">DISC</span>
-        <span class="${readClass}" title="Read">${read}</span>
+        <span class="totals-head">UNIQUE</span>
+        <span class="${readClass}" title="Read"><button type="button" class="totals-value-btn show-read-content-btn">${read}</button></span>
         <span class="${sentClass}" title="Sent">${sent}</span>
         <button type="button" class="${discardedBtnClass}" title="Discarded">${discarded}</button>
+        <span class="${uniqueClass}" title="Unique chips"><button type="button" class="totals-value-btn show-unique-chips-btn">${unique}</button></span>
       </div>`;
+    }
+
+    function countUniqueChips(row) {
+      const unique = new Set();
+      const details = Array.isArray(row && row.downloadCycleDetails) ? row.downloadCycleDetails : [];
+      details.forEach((cycleLines) => {
+        (Array.isArray(cycleLines) ? cycleLines : []).forEach((line) => {
+          const chip = extractChipFromPassingLine(line);
+          if (chip) {
+            unique.add(chip);
+          }
+        });
+      });
+      return unique.size;
     }
 
     function openDiscardedModal(row) {
@@ -1396,6 +1508,19 @@
       return chip || null;
     }
 
+    function extractTimestampFromPassingLine(line) {
+      const raw = (line || '').trim();
+      if (!raw) {
+        return '';
+      }
+      const separator = raw.includes('\t') ? '\t' : ';';
+      const parts = raw.split(separator);
+      if (parts.length < 2) {
+        return '';
+      }
+      return parts[1].replaceAll('"', '').trim();
+    }
+
     function buildBibChipNameMap(data) {
       const map = new Map();
       (data && Array.isArray(data.rows) ? data.rows : []).forEach((row) => {
@@ -1506,6 +1631,79 @@
         tr.innerHTML = `<td>${index + 1}</td><td><code>${escapeHtml(line || '')}</code></td><td>${escapeHtml(athlete)}</td>`;
         cycleDetailsBody.appendChild(tr);
       });
+    }
+
+    function renderUniqueChipsRows() {
+      uniqueChipsBody.innerHTML = '';
+      const orderedRows = uniqueChipsNewestFirst
+        ? [...uniqueChipsRows]
+        : [...uniqueChipsRows].reverse();
+      uniqueChipsOrderBtn.textContent = uniqueChipsNewestFirst ? 'Newest' : 'Oldest';
+      const filter = uniqueChipsFilter.trim().toLowerCase();
+      const rows = orderedRows.filter((entry) => {
+        if (!filter) {
+          return true;
+        }
+        return (entry.chip || '').toLowerCase().includes(filter)
+          || (entry.athlete || '').toLowerCase().includes(filter)
+          || (entry.timestamp || '').toLowerCase().includes(filter);
+      });
+      if (rows.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="4" class="text-center text-muted py-3">No matching unique chips</td>';
+        uniqueChipsBody.appendChild(tr);
+        return;
+      }
+      rows.forEach((entry, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td class="mono">${escapeHtml(entry.timestamp)}</td>
+          <td class="mono">${escapeHtml(entry.chip)}</td>
+          <td>${escapeHtml(entry.athlete)}</td>
+        `;
+        uniqueChipsBody.appendChild(tr);
+      });
+    }
+
+    async function openUniqueChipsModal(row) {
+      uniqueChipsTitle.textContent = `Unique chips - ${extractFileName(row && row.source ? row.source : '')}`;
+      uniqueChipsSubtitle.textContent = row && row.source ? row.source : '';
+      uniqueChipsBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Loading...</td></tr>';
+      uniqueChipsModal.show();
+      const [content, bibChipData] = await Promise.all([
+        loadRowFileContent(row.rowId),
+        loadBibChip().catch(() => ({ rows: [] }))
+      ]);
+      const nameMap = buildBibChipNameMap(bibChipData);
+      const blacklisted = new Set(Array.isArray(row && row.blacklistedCodes) ? row.blacklistedCodes : []);
+      const latestByChip = new Map();
+      String(content || '')
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line && !line.includes('*'))
+        .forEach((line) => {
+          const chip = extractChipFromPassingLine(line);
+          if (!chip || blacklisted.has(chip)) {
+            return;
+          }
+          const entry = {
+            chip,
+            timestamp: extractTimestampFromPassingLine(line),
+            athlete: nameMap.get(chip) || ''
+          };
+          const current = latestByChip.get(chip);
+          if (!current || (entry.timestamp || '').localeCompare(current.timestamp || '') > 0) {
+            latestByChip.set(chip, entry);
+          }
+        });
+      uniqueChipsRows = Array.from(latestByChip.values())
+        .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+      uniqueChipsNewestFirst = true;
+      uniqueChipsFilter = '';
+      uniqueChipsFilterInput.value = '';
+      uniqueChipsSubtitle.textContent = `${extractFileName(row && row.source ? row.source : '')} · ${uniqueChipsRows.length} unique chips`;
+      renderUniqueChipsRows();
     }
 
     function renderSourceContentRows() {
@@ -1899,6 +2097,13 @@
         : '/rr-live.html';
     });
 
+    btnTpView.addEventListener('click', () => {
+      const eventId = getEventId();
+      window.location.href = eventId
+        ? `/timingpointView.html?eventId=${encodeURIComponent(eventId)}`
+        : '/timingpointView.html';
+    });
+
     btnLivePage.addEventListener('click', () => {
       window.open('https://www.icron.it/services/live/', '_blank', 'noopener,noreferrer');
     });
@@ -1911,6 +2116,16 @@
     sourceContentFilterInput.addEventListener('input', () => {
       sourceContentFilter = sourceContentFilterInput.value || '';
       renderSourceContentRows();
+    });
+
+    uniqueChipsOrderBtn.addEventListener('click', () => {
+      uniqueChipsNewestFirst = !uniqueChipsNewestFirst;
+      renderUniqueChipsRows();
+    });
+
+    uniqueChipsFilterInput.addEventListener('input', () => {
+      uniqueChipsFilter = uniqueChipsFilterInput.value || '';
+      renderUniqueChipsRows();
     });
 
     messagesToggleBtn.addEventListener('click', () => {

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ICRONIUM RR Bridge - Manuale Tecnico</title>
+  <style>
+    body { margin: 0; font-family: "Avenir Next", "Segoe UI", sans-serif; background: #f8fafc; color: #0f172a; }
+    .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 20px 60px; }
+    .hero { background: #0f172a; color: white; padding: 28px 30px; border-radius: 20px; }
+    .hero h1 { margin: 0 0 8px; }
+    .hero a { color: #93c5fd; }
+    .card { background: white; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 26px; margin-top: 20px; box-shadow: 0 12px 28px rgba(15,23,42,0.05); }
+    h2 { margin-top: 0; border-bottom: 2px solid #eef2f7; padding-bottom: 8px; }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 6px; font-family: Consolas, monospace; }
+    ul { margin-bottom: 16px; }
+    li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>Manuale Tecnico</h1>
+      <p>Riferimento tecnico per setup, runtime, persistenza, endpoint e struttura dell'applicazione.</p>
+      <p><a href="./manuale-utente.html">Apri manuale utente HTML</a> · <a href="../README.md">Apri README.md</a></p>
+    </div>
+
+    <div class="card">
+      <h2>Stack</h2>
+      <ul>
+        <li>Java <code>21</code></li>
+        <li>Spring Boot <code>3.3.5</code></li>
+        <li>Gradle Wrapper</li>
+        <li>HTML + Bootstrap + STOMP/WebSocket</li>
+        <li>Persistenza JSON su disco</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Avvio</h2>
+      <p>Dalla root del progetto:</p>
+      <p><code>./gradlew bootRun</code></p>
+      <p>URL: <a href="http://localhost:8087">http://localhost:8087</a></p>
+    </div>
+
+    <div class="card">
+      <h2>Configurazione runtime</h2>
+      <ul>
+        <li>Porta HTTP: <code>8087</code></li>
+        <li>Timeout sessione: <code>12h</code></li>
+        <li>Log file: <code>logs/connector-rr.log</code></li>
+      </ul>
+      <p>File: <code>src/main/resources/application.properties</code></p>
+    </div>
+
+    <div class="card">
+      <h2>Pagine</h2>
+      <ul>
+        <li><code>/index.html</code></li>
+        <li><code>/dashboard.html</code></li>
+        <li><code>/gara-dettaglio.html?eventId=&lt;RRID&gt;</code></li>
+        <li><code>/timingpointView.html?eventId=&lt;RRID&gt;</code></li>
+        <li><code>/rr-live.html?eventId=&lt;RRID&gt;</code></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Sessione e WebSocket</h2>
+      <ul>
+        <li>Auth REST: <code>/api/auth/*</code></li>
+        <li>Keepalive: <code>GET /api/auth/keepalive</code></li>
+        <li>Handshake WS: <code>/ws</code></li>
+        <li>Topic: <code>/topic/messages</code>, <code>/topic/gare-updates</code>, <code>/topic/rr-live-messages</code>, <code>/topic/rr-live-updates</code></li>
+      </ul>
+      <p>La sessione RR è gestita lato backend. Il frontend non conserva il <code>pw</code> RR.</p>
+    </div>
+
+    <div class="card">
+      <h2>Persistenza</h2>
+      <ul>
+        <li><code>data/gara-dettaglio/&lt;eventId&gt;.json</code></li>
+        <li><code>data/rr-live/&lt;eventId&gt;.json</code></li>
+      </ul>
+      <p>I dati persistiti includono configurazione righe, stati, contatori, blacklist e storici recenti.</p>
+    </div>
+
+    <div class="card">
+      <h2>Scheduler</h2>
+      <p><strong>Race Detail</strong></p>
+      <ul>
+        <li>partenza su <code>PLAY</code></li>
+        <li>primo download immediato</li>
+        <li>polling regolato da <code>Download every</code></li>
+        <li>lettura incrementale file</li>
+        <li>righe con <code>*</code> scartate in ingresso</li>
+        <li>post batch massimo <code>300</code></li>
+        <li>in caso di errore post il contatore non avanza</li>
+      </ul>
+      <p><strong>RR Live</strong></p>
+      <ul>
+        <li>sync API RR Live per evento</li>
+        <li>polling per riga</li>
+        <li><code>RESET</code> azzera la memoria dell'ultimo file inviato</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>API principali</h2>
+      <ul>
+        <li><code>POST /api/auth/login</code></li>
+        <li><code>POST /api/auth/login-local</code></li>
+        <li><code>GET /api/gare</code></li>
+        <li><code>POST /api/gare/{eventId}/sync</code></li>
+        <li><code>GET /api/gare/{eventId}/rows</code></li>
+        <li><code>POST /api/gare/{eventId}/rows/{rowId}/actions/{action}</code></li>
+        <li><code>POST /api/rr-live/sync</code></li>
+        <li><code>GET /api/rr-live/state/{eventId}</code></li>
+      </ul>
+      <p>Il dettaglio completo è nel <a href="../README.md">README tecnico</a>.</p>
+    </div>
+
+    <div class="card">
+      <h2>Log e troubleshooting</h2>
+      <ul>
+        <li>log applicativo: <code>logs/connector-rr.log</code></li>
+        <li>porta applicazione: <code>8087</code></li>
+        <li>se il browser mostra errori websocket, verifica <code>/ws</code> e la porta attiva</li>
+        <li>se la sessione scade, verifica il keepalive e lo stato auth</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
