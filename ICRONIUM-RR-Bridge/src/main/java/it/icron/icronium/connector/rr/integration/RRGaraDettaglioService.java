@@ -31,6 +31,7 @@ import java.time.format.DateTimeParseException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.springframework.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -438,6 +440,86 @@ public class RRGaraDettaglioService {
         return snapshot.getRows();
     }
 
+    public List<GaraDettaglioRow> moveRow(String eventId, String rowId, String direction) throws Exception {
+        sessionService.requireAuthenticated();
+        GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nessuna riga salvata"));
+        ensureRowIds(snapshot);
+
+        List<GaraDettaglioRow> rows = snapshot.getRows();
+        int index = -1;
+        for (int i = 0; i < rows.size(); i++) {
+            if (rowId.equals(rows.get(i).getRowId())) {
+                index = i;
+                break;
+            }
+        }
+        if (index < 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Riga non trovata");
+        }
+
+        GaraDettaglioRow row = rows.get(index);
+        if (!isStopped(row)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Riordino consentito solo in stato Stopped");
+        }
+
+        int targetIndex;
+        if ("up".equalsIgnoreCase(direction)) {
+            targetIndex = index - 1;
+        } else if ("down".equalsIgnoreCase(direction)) {
+            targetIndex = index + 1;
+        } else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Direzione non valida");
+        }
+
+        if (targetIndex < 0 || targetIndex >= rows.size()) {
+            return rows;
+        }
+
+        GaraDettaglioRow targetRow = rows.get(targetIndex);
+        if (!isStopped(targetRow)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Riordino consentito solo tra righe Stopped");
+        }
+
+        Collections.swap(rows, index, targetIndex);
+        enrichSnapshotConnectionFromSession(snapshot);
+        repository.save(snapshot);
+        return rows;
+    }
+
+    public List<GaraDettaglioRow> relinkRowToLocal(String eventId, String rowId) throws Exception {
+        sessionService.requireAuthenticated();
+        GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nessuna riga salvata"));
+        ensureRowIds(snapshot);
+
+        GaraDettaglioRow row = snapshot.getRows().stream()
+                .filter(r -> rowId.equals(r.getRowId()))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Riga non trovata"));
+        if (!isStopped(row)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Relink locale consentito solo in stato Stopped");
+        }
+
+        String sourceType = detectSourceType(row.getSource());
+        if ("local".equals(sourceType)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La riga usa già un file locale");
+        }
+
+        String fileName = extractFileName(row.getSource());
+        if (fileName.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome file non ricavabile dal source");
+        }
+
+        Path localPath = findLocalFileCandidate(fileName)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File non trovato in ~/icronium-work"));
+
+        row.setSource(localPath.toAbsolutePath().normalize().toString());
+        enrichSnapshotConnectionFromSession(snapshot);
+        repository.save(snapshot);
+        return snapshot.getRows();
+    }
+
     public List<GaraDettaglioRow> addCodeToBlacklist(String eventId, String rowId, String code) throws Exception {
         sessionService.requireAuthenticated();
         String normalized = normalizeBlacklistCode(code);
@@ -711,6 +793,44 @@ public class RRGaraDettaglioService {
 
     private boolean isStopped(GaraDettaglioRow row) {
         return !isRunning(row);
+    }
+
+    private String detectSourceType(String source) {
+        String value = source == null ? "" : source.trim().toLowerCase();
+        if (value.contains("192.168.")) {
+            return "lan";
+        }
+        if (value.startsWith("http://") || value.startsWith("https://")) {
+            return "web";
+        }
+        return "local";
+    }
+
+    private String extractFileName(String source) {
+        String value = source == null ? "" : source.trim();
+        if (value.isBlank()) {
+            return "";
+        }
+        String noQuery = value.split("\\?", 2)[0];
+        String normalized = noQuery.replace('\\', '/');
+        int lastSlash = normalized.lastIndexOf('/');
+        if (lastSlash >= 0 && lastSlash + 1 < normalized.length()) {
+            return normalized.substring(lastSlash + 1);
+        }
+        return normalized;
+    }
+
+    private Optional<Path> findLocalFileCandidate(String fileName) throws Exception {
+        Path baseDir = Paths.get(System.getProperty("user.home"), "icronium-work");
+        if (!Files.isDirectory(baseDir)) {
+            return Optional.empty();
+        }
+        try (Stream<Path> stream = Files.walk(baseDir)) {
+            return stream
+                    .filter(Files::isRegularFile)
+                    .filter(path -> fileName.equals(path.getFileName().toString()))
+                    .findFirst();
+        }
     }
 
     private void validateGlobalAction(List<GaraDettaglioRow> rows, String action) {

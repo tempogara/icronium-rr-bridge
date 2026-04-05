@@ -356,6 +356,7 @@
         </button>
         <button id="btnRrLive" class="btn btn-sm btn-outline-secondary" type="button">RR Live</button>
         <button id="btnTpView" class="btn btn-sm btn-outline-secondary" type="button">TP View</button>
+        <button id="btnFileView" class="btn btn-sm btn-outline-secondary" type="button">File View</button>
         <button id="backToMenuBtn" class="btn btn-sm btn-outline-primary" type="button">Dashboard</button>
       </div>
     </div>
@@ -745,6 +746,7 @@
     const btnOpenRr = document.getElementById('btnOpenRr');
     const btnRrLive = document.getElementById('btnRrLive');
     const btnTpView = document.getElementById('btnTpView');
+    const btnFileView = document.getElementById('btnFileView');
     const btnLivePage = document.getElementById('btnLivePage');
     const saveFilePassaggiBtn = document.getElementById('saveFilePassaggiBtn');
     const filePassaggiSourceInput = document.getElementById('filePassaggiSourceInput');
@@ -950,6 +952,8 @@
         const isRunning = statoLower === 'running' || statoLower === 'error';
         const isError = !!row.errorState;
         const isStopped = !isRunning;
+        const sourceType = detectSourceType(row && row.source ? row.source : '');
+        const canRelinkLocal = isStopped && (sourceType === 'lan' || sourceType === 'web');
         if (isRunning) {
           hasRunningRows = true;
         }
@@ -964,6 +968,7 @@
             <div class="d-flex gap-1">
               <button class="btn btn-sm action-btn row-action" data-action="start">▶</button>
               <button class="btn btn-sm action-btn row-action" data-action="stop">■</button>
+              <button class="btn btn-sm action-btn row-action" data-action="relink-local" title="Relink local">L</button>
               <button class="btn btn-sm action-btn row-action" data-action="edit">✎</button>
               <button class="btn btn-sm action-btn row-action" data-action="duplicate">⧉</button>
               <button class="btn btn-sm action-btn row-action" data-action="rewind" nowrap>|◀</button>
@@ -981,12 +986,14 @@
         `;
         const rowStartBtn = tr.querySelector('[data-action="start"]');
         const rowStopBtn = tr.querySelector('[data-action="stop"]');
+        const rowRelinkLocalBtn = tr.querySelector('[data-action="relink-local"]');
         const rowEditBtn = tr.querySelector('[data-action="edit"]');
         const rowDuplicateBtn = tr.querySelector('[data-action="duplicate"]');
         const rowRewindBtn = tr.querySelector('[data-action="rewind"]');
         const rowDeleteBtn = tr.querySelector('[data-action="delete"]');
         rowStartBtn.disabled = isRunning;
         rowStopBtn.disabled = !isRunning;
+        rowRelinkLocalBtn.disabled = !canRelinkLocal;
         rowEditBtn.disabled = !isStopped;
         rowDuplicateBtn.disabled = !isStopped;
         rowRewindBtn.disabled = !isStopped;
@@ -1041,6 +1048,17 @@
           btn.addEventListener('click', async () => {
             const action = btn.dataset.action;
             const rowId = tr.dataset.rowId;
+            if (action === 'relink-local') {
+              try {
+                const rowsAfterRelink = await relinkRowToLocal(rowId);
+                renderRows(rowsAfterRelink);
+                appendWsMessage('Row relinked to local file');
+              } catch (error) {
+                appendWsMessage(error.message);
+              }
+              return;
+            }
+
             if (action === 'edit') {
               try {
                 await openEditTimingPointModal(rowId, row.source, row.timingPoint, row.scaricaOgniSec, row.syncOffset);
@@ -1849,6 +1867,17 @@
       return response.json();
     }
 
+    async function relinkRowToLocal(rowId) {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowId)}/relink-local`, {
+        method: 'POST'
+      });
+      if (!response.ok) {
+        throw new Error('Error relinking row to local file');
+      }
+      return response.json();
+    }
+
     async function blacklistCode(rowId, code) {
       const eventId = getEventId();
       const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowId)}/blacklist`, {
@@ -2102,6 +2131,13 @@
       window.location.href = eventId
         ? `/timingpointView.html?eventId=${encodeURIComponent(eventId)}`
         : '/timingpointView.html';
+    });
+
+    btnFileView.addEventListener('click', () => {
+      const eventId = getEventId();
+      window.location.href = eventId
+        ? `/fileView.html?eventId=${encodeURIComponent(eventId)}`
+        : '/fileView.html';
     });
 
     btnLivePage.addEventListener('click', () => {

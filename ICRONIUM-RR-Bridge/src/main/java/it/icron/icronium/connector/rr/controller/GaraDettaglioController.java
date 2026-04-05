@@ -198,6 +198,28 @@ public class GaraDettaglioController {
         }
     }
 
+    @PostMapping("/{eventId}/rows/{rowId}/move/{direction}")
+    public ResponseEntity<List<GaraDettaglioRow>> moveRow(@PathVariable String eventId, @PathVariable String rowId, @PathVariable String direction) {
+        try {
+            return ResponseEntity.ok(rrGaraDettaglioService.moveRow(eventId, rowId, direction));
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return ResponseEntity.status(HttpStatusCode.valueOf(e.getStatusCode().value())).build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/{eventId}/rows/{rowId}/relink-local")
+    public ResponseEntity<List<GaraDettaglioRow>> relinkLocal(@PathVariable String eventId, @PathVariable String rowId) {
+        try {
+            return ResponseEntity.ok(rrGaraDettaglioService.relinkRowToLocal(eventId, rowId));
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return ResponseEntity.status(HttpStatusCode.valueOf(e.getStatusCode().value())).build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @PostMapping("/{eventId}/rows/{rowId}/blacklist")
     public ResponseEntity<List<GaraDettaglioRow>> blacklistCode(@PathVariable String eventId, @PathVariable String rowId, @RequestBody String code) {
         try {

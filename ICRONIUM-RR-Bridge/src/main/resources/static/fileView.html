@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Timing Point View</title>
+  <title>File View</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
@@ -134,6 +134,74 @@
     .mono {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
+    .file-name {
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: #1f2937;
+      word-break: break-word;
+    }
+    .file-meta {
+      margin-top: 4px;
+      font-size: 0.82rem;
+      color: #6b7280;
+    }
+    .file-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 82px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      margin-top: 6px;
+    }
+    .file-status-running {
+      background: #1f9d55;
+      color: #ffffff;
+    }
+    .file-status-stopped {
+      background: #d64545;
+      color: #ffffff;
+    }
+    .file-status-error {
+      background: #f2c94c;
+      color: #1f2327;
+    }
+    .source-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      color: #ffffff;
+      font-size: 0.68rem;
+      font-weight: 700;
+      flex: 0 0 auto;
+      margin-right: 8px;
+    }
+    .source-local { background: #198754; }
+    .source-lan { background: #fd7e14; }
+    .source-web { background: #0d6efd; }
+    .file-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .file-move-controls {
+      display: flex;
+      gap: 4px;
+      flex: 0 0 auto;
+    }
+    .file-move-btn {
+      min-width: 28px;
+      padding: 0.1rem 0.35rem;
+      font-size: 0.78rem;
+      line-height: 1.1;
+    }
     .minute-chart-wrap {
       width: 100%;
       min-width: 720px;
@@ -142,8 +210,8 @@
       display: flex;
       align-items: flex-end;
       gap: 2px;
-      height: 148px;
-      padding: 12px 12px 12px;
+      height: 74px;
+      padding: 8px 10px;
       border: 1px solid #d6dae0;
       border-radius: 8px;
       background: linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
@@ -154,6 +222,15 @@
       border-radius: 3px 3px 0 0;
       background: linear-gradient(180deg, #60a5fa 0%, #0d6efd 100%);
       opacity: 0.95;
+    }
+    .minute-bar.running {
+      background: linear-gradient(180deg, #4ade80 0%, #1f9d55 100%);
+    }
+    .minute-bar.stopped {
+      background: linear-gradient(180deg, #f87171 0%, #d64545 100%);
+    }
+    .minute-bar.error {
+      background: linear-gradient(180deg, #f4d35e 0%, #f2c94c 100%);
     }
     .minute-bar.is-empty {
       background: #d7dee8;
@@ -187,8 +264,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 148px;
-      padding: 16px;
+      min-height: 74px;
+      padding: 10px;
       border: 1px dashed #d6dae0;
       border-radius: 8px;
       background: #f8f9fb;
@@ -196,13 +273,9 @@
       font-size: 0.9rem;
     }
     #tpViewBody td {
-      padding-top: 1rem;
-      padding-bottom: 1rem;
+      padding-top: 0.45rem;
+      padding-bottom: 0.45rem;
       vertical-align: middle;
-    }
-    #tpViewBody td:first-child {
-      font-size: 1.05rem;
-      font-weight: 700;
     }
   </style>
 </head>
@@ -218,7 +291,7 @@
           <span>Open RR</span>
         </button>
         <button id="btnRrLive" class="btn btn-sm btn-outline-secondary" type="button">RR Live</button>
-        <button id="btnFileView" class="btn btn-sm btn-outline-secondary" type="button">File View</button>
+        <button id="btnTpView" class="btn btn-sm btn-outline-secondary" type="button">TP View</button>
         <button id="btnDetailView" class="btn btn-sm btn-outline-secondary" type="button">Race Detail</button>
         <button id="backToMenuBtn" class="btn btn-sm btn-outline-primary" type="button">Dashboard</button>
       </div>
@@ -241,7 +314,10 @@
         <span id="rrIdLabel" class="rrid-label"></span>
         <button id="syncBtn" class="btn btn-outline-secondary">SYNC</button>
         <button id="refreshBtn" class="btn btn-outline-secondary">Refresh</button>
-        <span id="groupCountBadge" class="badge text-bg-secondary ms-auto">Timing points: 0</span>
+        <label for="startTimeInput" class="mb-0 fw-semibold ms-2">Start time:</label>
+        <input id="startTimeInput" type="text" class="form-control form-control-sm" style="width: 110px;" placeholder="00:00:00">
+        <button id="resetStartTimeBtn" class="btn btn-outline-secondary btn-sm" type="button">Reset</button>
+        <span id="groupCountBadge" class="badge text-bg-secondary ms-auto">Files: 0</span>
       </div>
     </div>
 
@@ -251,7 +327,7 @@
           <table class="table table-bordered table-hover mb-0 align-middle">
             <thead class="table-light">
               <tr>
-                <th style="width: 220px;">Timing point</th>
+                <th style="width: 320px;">File</th>
                 <th style="width: 1%;">Totals</th>
                 <th>Minute chart</th>
               </tr>
@@ -281,7 +357,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <div>
-            <h5 id="tpReadTitle" class="modal-title">Timing point readings</h5>
+            <h5 id="tpReadTitle" class="modal-title">File readings</h5>
             <div id="tpReadSubtitle" class="small text-muted mt-1"></div>
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -361,10 +437,12 @@
     const btnOpenRr = document.getElementById('btnOpenRr');
     const btnRrLive = document.getElementById('btnRrLive');
     const btnDetailView = document.getElementById('btnDetailView');
-    const btnFileView = document.getElementById('btnFileView');
+    const btnTpView = document.getElementById('btnTpView');
     const backToMenuBtn = document.getElementById('backToMenuBtn');
     const syncBtn = document.getElementById('syncBtn');
     const refreshBtn = document.getElementById('refreshBtn');
+    const startTimeInput = document.getElementById('startTimeInput');
+    const resetStartTimeBtn = document.getElementById('resetStartTimeBtn');
     const groupCountBadge = document.getElementById('groupCountBadge');
     const tpViewBody = document.getElementById('tpViewBody');
     const messagesPanel = document.getElementById('messagesPanel');
@@ -388,6 +466,7 @@
     let tpUniqueNewestFirst = true;
     let tpUniqueFilter = '';
     let minuteChartBatchSignature = '';
+    let chartStartTimeSeconds = null;
 
     function getEventId() {
       const params = new URLSearchParams(window.location.search);
@@ -514,6 +593,21 @@
       return response.json();
     }
 
+    async function moveRow(rowId, direction) {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowId)}/move/${encodeURIComponent(direction)}`, {
+        method: 'POST'
+      });
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Error moving row');
+      }
+      return response.json();
+    }
+
     async function loadBibChip() {
       const eventId = getEventId();
       const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/bib-chip`);
@@ -617,30 +711,65 @@
       });
     }
 
-    function groupRowsByTimingPoint(rows) {
-      const groups = new Map();
-      (rows || []).forEach((row) => {
-        const key = (row && row.timingPoint ? String(row.timingPoint).trim() : '') || '(No timing point)';
-        if (!groups.has(key)) {
-          groups.set(key, []);
-        }
-        groups.get(key).push(row);
-      });
-      return Array.from(groups.entries())
-        .map(([timingPoint, groupRows]) => ({ timingPoint, rows: groupRows }))
-        .sort((a, b) => a.timingPoint.localeCompare(b.timingPoint));
+    function detectSourceType(source) {
+      const value = (source || '').trim().toLowerCase();
+      if (value.includes('192.168.')) {
+        return 'lan';
+      }
+      if (value.startsWith('http://') || value.startsWith('https://')) {
+        return 'web';
+      }
+      return 'local';
     }
 
-    function buildGroupSignature(group) {
-      return (group && Array.isArray(group.rows) ? group.rows : [])
-        .map((row) => {
-          const fileCount = Number(row && row.righeFile) || 0;
-          const sentCount = Number(row && row.righePo) || 0;
-          const updated = row && row.lastDownloadAt ? String(row.lastDownloadAt) : '';
-          return `${row && row.rowId ? row.rowId : ''}:${fileCount}:${sentCount}:${updated}`;
-        })
-        .sort()
-        .join('|');
+    function sourceTypeView(source) {
+      const type = detectSourceType(source);
+      if (type === 'lan') {
+        return { text: 'N', className: 'source-lan' };
+      }
+      if (type === 'web') {
+        return { text: 'W', className: 'source-web' };
+      }
+      return { text: 'L', className: 'source-local' };
+    }
+
+    function buildFileEntries(rows) {
+      return (rows || []).map((row) => ({ row }));
+    }
+
+    function renderFileCell(row, index, totalRows) {
+      const source = row && row.source ? row.source : '';
+      const fileName = extractFileName(source);
+      const timingPoint = row && row.timingPoint ? row.timingPoint : '(No timing point)';
+      const typeInfo = sourceTypeView(source);
+      const stato = row && row.stato ? String(row.stato).toLowerCase() : 'stopped';
+      const isError = !!(row && row.errorState);
+      const isStopped = !isError && stato !== 'running';
+      const statusClass = isError ? 'file-status-error' : (stato === 'running' ? 'file-status-running' : 'file-status-stopped');
+      const statusText = isError ? 'ERROR' : (stato === 'running' ? 'RUNNING' : 'STOPPED');
+      return `
+        <div class="d-flex align-items-start">
+          <span class="source-icon ${typeInfo.className}">${typeInfo.text}</span>
+          <div>
+            <div class="file-header">
+              <div class="file-name">${escapeHtml(fileName || source || '(No file)')}</div>
+              <div class="file-move-controls">
+                <button class="btn btn-sm btn-outline-secondary file-move-btn move-row-btn" data-direction="up" ${!isStopped || index === 0 ? 'disabled' : ''} title="Move up">↑</button>
+                <button class="btn btn-sm btn-outline-secondary file-move-btn move-row-btn" data-direction="down" ${!isStopped || index === totalRows - 1 ? 'disabled' : ''} title="Move down">↓</button>
+              </div>
+            </div>
+            <div class="file-meta">${escapeHtml(timingPoint)}</div>
+            <div class="file-status ${statusClass}">${statusText}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function buildRowSignature(row) {
+      const fileCount = Number(row && row.righeFile) || 0;
+      const sentCount = Number(row && row.righePo) || 0;
+      const updated = row && row.lastDownloadAt ? String(row.lastDownloadAt) : '';
+      return `${row && row.rowId ? row.rowId : ''}:${fileCount}:${sentCount}:${updated}`;
     }
 
     function parseTimestampToMinute(timestamp) {
@@ -705,7 +834,46 @@
       return timeline;
     }
 
-    function buildMinuteChartHtml(minuteMap, timeline) {
+    function parseStartTimeToSeconds(value) {
+      const match = String(value || '').trim().match(/^(\d{2}):(\d{2}):(\d{2})$/);
+      if (!match) {
+        return null;
+      }
+      const hours = Number(match[1]);
+      const minutes = Number(match[2]);
+      const seconds = Number(match[3]);
+      if (hours > 23 || minutes > 59 || seconds > 59) {
+        return null;
+      }
+      return (hours * 3600) + (minutes * 60) + seconds;
+    }
+
+    function extractTimeOfDaySeconds(timestamp) {
+      const match = String(timestamp || '').match(/(\d{2}):(\d{2})(?::(\d{2}))?/);
+      if (!match) {
+        return null;
+      }
+      const hours = Number(match[1]);
+      const minutes = Number(match[2]);
+      const seconds = Number(match[3] || '0');
+      if (hours > 23 || minutes > 59 || seconds > 59) {
+        return null;
+      }
+      return (hours * 3600) + (minutes * 60) + seconds;
+    }
+
+    function passesChartStartTime(timestamp) {
+      if (!Number.isFinite(chartStartTimeSeconds)) {
+        return true;
+      }
+      const timeOfDaySeconds = extractTimeOfDaySeconds(timestamp);
+      if (!Number.isFinite(timeOfDaySeconds)) {
+        return false;
+      }
+      return timeOfDaySeconds >= chartStartTimeSeconds;
+    }
+
+    function buildMinuteChartHtml(minuteMap, timeline, row) {
       if (!timeline.length) {
         return '<div class="minute-chart-empty">No timestamped readings</div>';
       }
@@ -715,10 +883,12 @@
         return '<div class="minute-chart-empty">No timestamped readings in shared timeline</div>';
       }
       const maxCount = counts.reduce((max, count) => Math.max(max, count), 0) || 1;
+      const stato = row && row.stato ? String(row.stato).toLowerCase() : 'stopped';
+      const stateClass = row && row.errorState ? 'error' : (stato === 'running' ? 'running' : 'stopped');
       const bars = timeline.map((date, index) => {
         const count = counts[index];
         const height = count > 0 ? Math.max(8, Math.round((count / maxCount) * 100)) : 6;
-        const barClass = count > 0 ? 'minute-bar' : 'minute-bar is-empty';
+        const barClass = count > 0 ? `minute-bar ${stateClass}` : 'minute-bar is-empty';
         const label = formatMinuteLabel(date);
         return `<div class="${barClass}" style="height:${height}%;" title="${escapeHtml(label)} - ${count} readings"></div>`;
       }).join('');
@@ -744,73 +914,76 @@
       `;
     }
 
-    function buildBatchSignature(groups) {
-      return groups.map((group) => `${group.timingPoint}:${buildGroupSignature(group)}`).join('||');
+    function buildBatchSignature(entries) {
+      return entries.map((entry) => buildRowSignature(entry.row)).join('||');
     }
 
-    async function rebuildMinuteCharts(groups) {
-      const batchSignature = buildBatchSignature(groups);
+    async function rebuildMinuteCharts(entries) {
+      const batchSignature = buildBatchSignature(entries);
       minuteChartBatchSignature = batchSignature;
       const chartTargets = new Map();
-      groups.forEach((group) => {
-        const selector = `[data-chart-key="${CSS.escape(group.timingPoint)}"]`;
+      entries.forEach((entry) => {
+        const row = entry.row;
+        const selector = `[data-chart-key="${CSS.escape(row.rowId)}"]`;
         const container = tpViewBody.querySelector(selector);
         if (container) {
           container.innerHTML = '<div class="minute-chart-loading">Loading minute chart...</div>';
-          chartTargets.set(group.timingPoint, container);
+          chartTargets.set(row.rowId, container);
         }
       });
       try {
         const minuteMaps = new Map();
         let firstMinute = null;
         let latestMinute = null;
-        await Promise.all(groups.map(async (group) => {
+        await Promise.all(entries.map(async (entry) => {
+          const row = entry.row;
           const minuteMap = new Map();
-          const contents = await Promise.all((group.rows || []).map(async (row) => ({
-            row,
-            content: await loadRowFileContent(row.rowId).catch(() => '')
-          })));
-          contents.forEach(({ row, content }) => {
-            const blacklisted = new Set(Array.isArray(row && row.blacklistedCodes) ? row.blacklistedCodes : []);
-            String(content || '')
-              .split(/\r?\n/)
-              .map((line) => line.trim())
-              .filter((line) => line && !line.includes('*'))
-              .forEach((line) => {
-                const chip = extractChipFromPassingLine(line);
-                if (chip && blacklisted.has(chip)) {
-                  return;
-                }
-                const minuteDate = parseTimestampToMinute(extractTimestampFromPassingLine(line));
-                if (!minuteDate) {
-                  return;
-                }
-                if (!firstMinute || minuteDate.getTime() < firstMinute.getTime()) {
-                  firstMinute = new Date(minuteDate.getTime());
-                }
-                if (!latestMinute || minuteDate.getTime() > latestMinute.getTime()) {
-                  latestMinute = new Date(minuteDate.getTime());
-                }
-                const key = minuteDateKey(minuteDate);
-                minuteMap.set(key, (minuteMap.get(key) || 0) + 1);
-              });
-          });
-          minuteMaps.set(group.timingPoint, minuteMap);
+          const content = await loadRowFileContent(row.rowId).catch(() => '');
+          const blacklisted = new Set(Array.isArray(row && row.blacklistedCodes) ? row.blacklistedCodes : []);
+          String(content || '')
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter((line) => line && !line.includes('*'))
+            .forEach((line) => {
+              const chip = extractChipFromPassingLine(line);
+              if (chip && blacklisted.has(chip)) {
+                return;
+              }
+              const timestamp = extractTimestampFromPassingLine(line);
+              if (!passesChartStartTime(timestamp)) {
+                return;
+              }
+              const minuteDate = parseTimestampToMinute(timestamp);
+              if (!minuteDate) {
+                return;
+              }
+              if (!firstMinute || minuteDate.getTime() < firstMinute.getTime()) {
+                firstMinute = new Date(minuteDate.getTime());
+              }
+              if (!latestMinute || minuteDate.getTime() > latestMinute.getTime()) {
+                latestMinute = new Date(minuteDate.getTime());
+              }
+              const key = minuteDateKey(minuteDate);
+              minuteMap.set(key, (minuteMap.get(key) || 0) + 1);
+            });
+          minuteMaps.set(row.rowId, minuteMap);
         }));
         const sharedTimeline = buildSharedTimeline(firstMinute, latestMinute);
-        groups.forEach((group) => {
-          const container = chartTargets.get(group.timingPoint);
+        entries.forEach((entry) => {
+          const row = entry.row;
+          const container = chartTargets.get(row.rowId);
           if (!container) {
             return;
           }
-          const html = buildMinuteChartHtml(minuteMaps.get(group.timingPoint) || new Map(), sharedTimeline);
+          const html = buildMinuteChartHtml(minuteMaps.get(row.rowId) || new Map(), sharedTimeline, row);
           if ((container.getAttribute('data-chart-batch') || '') === batchSignature) {
             container.innerHTML = html;
           }
         });
       } catch (_error) {
-        groups.forEach((group) => {
-          const container = chartTargets.get(group.timingPoint);
+        entries.forEach((entry) => {
+          const row = entry.row;
+          const container = chartTargets.get(row.rowId);
           if (container && (container.getAttribute('data-chart-batch') || '') === batchSignature) {
             container.innerHTML = '<div class="minute-chart-empty">Chart not available</div>';
           }
@@ -818,11 +991,11 @@
       }
     }
 
-    function renderTotals(group) {
-      const read = (group.rows || []).reduce((sum, row) => sum + (Number(row && row.righeFile) || 0), 0);
-      const sent = (group.rows || []).reduce((sum, row) => sum + (Number(row && row.righePo) || 0), 0);
-      const discarded = (group.rows || []).reduce((sum, row) => sum + visibleDiscardedLines(row).length, 0);
-      const unique = countUniqueChips(group);
+    function renderTotals(row) {
+      const read = Number(row && row.righeFile) || 0;
+      const sent = Number(row && row.righePo) || 0;
+      const discarded = visibleDiscardedLines(row).length;
+      const unique = countUniqueChips(row);
       const readClass = read > 0 ? 'totals-value totals-green' : 'totals-value';
       let sentClass = 'totals-value totals-red';
       if (sent > 0 && sent < read) {
@@ -844,17 +1017,15 @@
       </div>`;
     }
 
-    function countUniqueChips(group) {
+    function countUniqueChips(row) {
       const unique = new Set();
-      (group && Array.isArray(group.rows) ? group.rows : []).forEach((row) => {
-        const details = Array.isArray(row && row.downloadCycleDetails) ? row.downloadCycleDetails : [];
-        details.forEach((cycleLines) => {
-          (Array.isArray(cycleLines) ? cycleLines : []).forEach((line) => {
-            const chip = extractChipFromPassingLine(line);
-            if (chip) {
-              unique.add(chip);
-            }
-          });
+      const details = Array.isArray(row && row.downloadCycleDetails) ? row.downloadCycleDetails : [];
+      details.forEach((cycleLines) => {
+        (Array.isArray(cycleLines) ? cycleLines : []).forEach((line) => {
+          const chip = extractChipFromPassingLine(line);
+          if (chip) {
+            unique.add(chip);
+          }
         });
       });
       return unique.size;
@@ -862,27 +1033,41 @@
 
     function renderGroups(rows) {
       currentRows = Array.isArray(rows) ? [...rows] : [];
-      const groups = groupRowsByTimingPoint(currentRows);
-      groupCountBadge.textContent = `Timing points: ${groups.length}`;
+      const entries = buildFileEntries(currentRows);
+      groupCountBadge.textContent = `Files: ${entries.length}`;
       tpViewBody.innerHTML = '';
-      if (groups.length === 0) {
+      if (entries.length === 0) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="3" class="text-center text-muted py-4">No timing point data</td>';
+        tr.innerHTML = '<td colspan="3" class="text-center text-muted py-4">No file data</td>';
         tpViewBody.appendChild(tr);
         return;
       }
-      groups.forEach((group) => {
+      const batchSignature = buildBatchSignature(entries);
+      entries.forEach((entry, index) => {
+        const row = entry.row;
         const tr = document.createElement('tr');
+        tr.dataset.rowId = row.rowId || '';
         tr.innerHTML = `
-          <td class="fw-semibold">${escapeHtml(group.timingPoint)}</td>
-          <td>${renderTotals(group)}</td>
-          <td><div class="minute-chart-wrap" data-chart-key="${escapeHtml(group.timingPoint)}" data-chart-batch="${escapeHtml(buildBatchSignature(groups))}"><div class="minute-chart-loading">Loading minute chart...</div></div></td>
+          <td>${renderFileCell(row, index, entries.length)}</td>
+          <td>${renderTotals(row)}</td>
+          <td><div class="minute-chart-wrap" data-chart-key="${escapeHtml(row.rowId)}" data-chart-batch="${escapeHtml(batchSignature)}"><div class="minute-chart-loading">Loading minute chart...</div></div></td>
         `;
+        tr.querySelectorAll('.move-row-btn').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const direction = btn.getAttribute('data-direction') || '';
+            try {
+              const rows = await moveRow(tr.dataset.rowId, direction);
+              renderGroups(rows);
+            } catch (error) {
+              appendWsMessage(error.message);
+            }
+          });
+        });
         const readBtn = tr.querySelector('.show-tp-read-btn');
         if (readBtn) {
           readBtn.addEventListener('click', async () => {
             try {
-              await openTimingPointReadModal(group);
+              await openFileReadModal(row);
             } catch (error) {
               appendWsMessage(error.message);
             }
@@ -892,7 +1077,7 @@
         if (uniqueBtn) {
           uniqueBtn.addEventListener('click', async () => {
             try {
-              await openTimingPointUniqueModal(group);
+              await openFileUniqueModal(row);
             } catch (error) {
               appendWsMessage(error.message);
             }
@@ -900,44 +1085,41 @@
         }
         tpViewBody.appendChild(tr);
       });
-      rebuildMinuteCharts(groups);
+      rebuildMinuteCharts(entries);
     }
 
-    async function openTimingPointReadModal(group) {
-      tpReadTitle.textContent = `Timing point readings - ${group.timingPoint}`;
-      tpReadSubtitle.textContent = 'Loading aggregated source content';
+    async function openFileReadModal(row) {
+      const fileName = extractFileName(row && row.source ? row.source : '');
+      tpReadTitle.textContent = `File readings - ${fileName}`;
+      tpReadSubtitle.textContent = row && row.source ? row.source : '';
       tpReadBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Loading...</td></tr>';
       tpReadModal.show();
-      const [bibChipData, contents] = await Promise.all([
+      const [bibChipData, content] = await Promise.all([
         loadBibChip().catch(() => ({ rows: [] })),
-        Promise.all((group.rows || []).map(async (row) => ({
-          row,
-          content: await loadRowFileContent(row.rowId).catch(() => '')
-        })))
+        loadRowFileContent(row.rowId).catch(() => '')
       ]);
       const nameMap = buildBibChipNameMap(bibChipData);
-      const aggregated = contents.flatMap(({ row, content }) => {
-        const blacklisted = new Set(Array.isArray(row && row.blacklistedCodes) ? row.blacklistedCodes : []);
-        return String(content || '')
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter((line) => line && !line.includes('*'))
-          .filter((line) => {
+      const blacklisted = new Set(Array.isArray(row && row.blacklistedCodes) ? row.blacklistedCodes : []);
+      const aggregated = String(content || '')
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line && !line.includes('*'))
+        .filter((line) => {
+          const chip = extractChipFromPassingLine(line);
+          return !chip || !blacklisted.has(chip);
+        })
+        .map((line) => ({
+          line,
+          timestamp: extractTimestampFromPassingLine(line),
+          sourceFile: extractFileName(row && row.source ? row.source : ''),
+          athlete: (() => {
             const chip = extractChipFromPassingLine(line);
-            return !chip || !blacklisted.has(chip);
-          })
-          .map((line) => ({
-            line,
-            timestamp: extractTimestampFromPassingLine(line),
-            sourceFile: extractFileName(row && row.source ? row.source : ''),
-            athlete: (() => {
-              const chip = extractChipFromPassingLine(line);
-              return chip ? (nameMap.get(chip) || '') : '';
-            })()
-          }));
-      }).sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+            return chip ? (nameMap.get(chip) || '') : '';
+          })()
+        }))
+        .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
 
-      tpReadSubtitle.textContent = `${group.rows.length} sources · ${aggregated.length} readings`;
+      tpReadSubtitle.textContent = `${fileName} · ${aggregated.length} readings`;
       tpReadBody.innerHTML = '';
       if (aggregated.length === 0) {
         const tr = document.createElement('tr');
@@ -993,49 +1175,45 @@
       });
     }
 
-    async function openTimingPointUniqueModal(group) {
-      tpUniqueTitle.textContent = `Unique chips - ${group.timingPoint}`;
-      tpUniqueSubtitle.textContent = 'Loading aggregated source content';
+    async function openFileUniqueModal(row) {
+      const fileName = extractFileName(row && row.source ? row.source : '');
+      tpUniqueTitle.textContent = `Unique chips - ${fileName}`;
+      tpUniqueSubtitle.textContent = row && row.source ? row.source : '';
       tpUniqueBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Loading...</td></tr>';
       tpUniqueModal.show();
-      const [bibChipData, contents] = await Promise.all([
+      const [bibChipData, content] = await Promise.all([
         loadBibChip().catch(() => ({ rows: [] })),
-        Promise.all((group.rows || []).map(async (row) => ({
-          row,
-          content: await loadRowFileContent(row.rowId).catch(() => '')
-        })))
+        loadRowFileContent(row.rowId).catch(() => '')
       ]);
       const nameMap = buildBibChipNameMap(bibChipData);
       const latestByChip = new Map();
-      contents.forEach(({ row, content }) => {
-        const blacklisted = new Set(Array.isArray(row && row.blacklistedCodes) ? row.blacklistedCodes : []);
-        String(content || '')
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter((line) => line && !line.includes('*'))
-          .forEach((line) => {
-            const chip = extractChipFromPassingLine(line);
-            if (!chip || blacklisted.has(chip)) {
-              return;
-            }
-            const entry = {
-              chip,
-              timestamp: extractTimestampFromPassingLine(line),
-              sourceFile: extractFileName(row && row.source ? row.source : ''),
-              athlete: nameMap.get(chip) || ''
-            };
-            const current = latestByChip.get(chip);
-            if (!current || (entry.timestamp || '').localeCompare(current.timestamp || '') > 0) {
-              latestByChip.set(chip, entry);
-            }
-          });
-      });
+      const blacklisted = new Set(Array.isArray(row && row.blacklistedCodes) ? row.blacklistedCodes : []);
+      String(content || '')
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line && !line.includes('*'))
+        .forEach((line) => {
+          const chip = extractChipFromPassingLine(line);
+          if (!chip || blacklisted.has(chip)) {
+            return;
+          }
+          const entry = {
+            chip,
+            timestamp: extractTimestampFromPassingLine(line),
+            sourceFile: extractFileName(row && row.source ? row.source : ''),
+            athlete: nameMap.get(chip) || ''
+          };
+          const current = latestByChip.get(chip);
+          if (!current || (entry.timestamp || '').localeCompare(current.timestamp || '') > 0) {
+            latestByChip.set(chip, entry);
+          }
+        });
       tpUniqueRows = Array.from(latestByChip.values())
         .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
       tpUniqueNewestFirst = true;
       tpUniqueFilter = '';
       tpUniqueFilterInput.value = '';
-      tpUniqueSubtitle.textContent = `${group.rows.length} sources · ${tpUniqueRows.length} unique chips`;
+      tpUniqueSubtitle.textContent = `${fileName} · ${tpUniqueRows.length} unique chips`;
       renderTimingPointUniqueRows();
     }
 
@@ -1050,6 +1228,31 @@
         currentRows.push(updatedRow);
       }
       renderGroups(currentRows);
+    }
+
+    function applyStartTimeSelection() {
+      const raw = (startTimeInput.value || '').trim();
+      if (!raw) {
+        chartStartTimeSeconds = null;
+        renderGroups(currentRows);
+        return;
+      }
+      const parsed = parseStartTimeToSeconds(raw);
+      if (!Number.isFinite(parsed)) {
+        appendWsMessage('Start time format must be HH:mm:ss');
+        return;
+      }
+      chartStartTimeSeconds = parsed;
+      startTimeInput.value = raw;
+      renderGroups(currentRows);
+      appendWsMessage(`Chart start time set to ${raw}`);
+    }
+
+    function resetStartTimeSelection() {
+      chartStartTimeSeconds = null;
+      startTimeInput.value = '';
+      renderGroups(currentRows);
+      appendWsMessage('Chart start time reset');
     }
 
     function connectWebSocket() {
@@ -1107,11 +1310,11 @@
         : '/rr-live.html';
     });
 
-    btnFileView.addEventListener('click', () => {
+    btnTpView.addEventListener('click', () => {
       const eventId = getEventId();
       window.location.href = eventId
-        ? `/fileView.html?eventId=${encodeURIComponent(eventId)}`
-        : '/fileView.html';
+        ? `/timingpointView.html?eventId=${encodeURIComponent(eventId)}`
+        : '/timingpointView.html';
     });
 
     btnOpenRr.addEventListener('click', async () => {
@@ -1145,6 +1348,20 @@
       } catch (error) {
         appendWsMessage(error.message);
       }
+    });
+
+    startTimeInput.addEventListener('change', () => {
+      applyStartTimeSelection();
+    });
+
+    startTimeInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        applyStartTimeSelection();
+      }
+    });
+
+    resetStartTimeBtn.addEventListener('click', () => {
+      resetStartTimeSelection();
     });
 
     messagesToggleBtn.addEventListener('click', () => {
