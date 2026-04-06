@@ -1,8 +1,10 @@
 package it.icron.icronium.connector.rr.controller;
 
 import it.icron.icronium.connector.rr.integration.RRSessionService;
+import it.icron.icronium.connector.rr.integration.TZeroConfigService;
 import it.icron.icronium.connector.rr.model.LoginRequest;
 import it.icron.icronium.connector.rr.model.LoginResponse;
+import it.icron.icronium.connector.rr.model.TZeroConfigRequest;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,9 +20,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final RRSessionService sessionService;
+    private final TZeroConfigService tZeroConfigService;
 
-    public AuthController(RRSessionService sessionService) {
+    public AuthController(RRSessionService sessionService, TZeroConfigService tZeroConfigService) {
         this.sessionService = sessionService;
+        this.tZeroConfigService = tZeroConfigService;
     }
 
     @PostMapping("/login")
@@ -60,6 +64,23 @@ public class AuthController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/login-tzero")
+    public ResponseEntity<LoginResponse> loginTZero(@RequestBody TZeroConfigRequest request) {
+        try {
+            String savedRoot = tZeroConfigService.saveRootFolder(request == null ? null : request.getRootFolder());
+            sessionService.loginTZero(savedRoot);
+            return ResponseEntity.ok(new LoginResponse(
+                    true,
+                    "TZERO",
+                    sessionService.getUserId(),
+                    "Login TZero effettuato con successo."
+            ));
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new LoginResponse(false, "TZERO", null, e.getReason() == null ? "Errore configurazione TZero" : e.getReason()));
+        }
     }
 
     @PostMapping("/logout")

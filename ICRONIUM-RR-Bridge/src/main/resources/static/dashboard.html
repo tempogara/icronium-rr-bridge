@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard RR</title>
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-icronium.svg">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
@@ -37,6 +38,7 @@
       <div class="d-flex align-items-center gap-2">
         <a href="/docs/manuale-utente.html" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary">User Manual</a>
         <a href="/docs/manuale-tecnico.html" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary">Technical Manual</a>
+        <button id="changeTzeroRootBtn" class="btn btn-sm btn-outline-secondary d-none" type="button">Change TZero Folder</button>
         <span id="userBadge" class="badge text-bg-secondary"></span>
         <button id="logoutBtn" class="btn btn-sm btn-outline-danger" type="button">Logout</button>
       </div>
@@ -47,7 +49,7 @@
     <div class="card shadow-sm border-0">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h1 class="h4 mb-0">Elenco gare</h1>
+          <h1 id="dashboardTitle" class="h4 mb-0">Elenco gare</h1>
           <button id="refreshBtn" class="btn btn-sm btn-outline-primary" type="button">Aggiorna</button>
         </div>
 
@@ -92,6 +94,8 @@
     const gareBody = document.getElementById('gareBody');
     const selectionInfo = document.getElementById('selectionInfo');
     const userBadge = document.getElementById('userBadge');
+    const changeTzeroRootBtn = document.getElementById('changeTzeroRootBtn');
+    const dashboardTitle = document.getElementById('dashboardTitle');
     const logoutBtn = document.getElementById('logoutBtn');
     const refreshBtn = document.getElementById('refreshBtn');
     const messagesLog = document.getElementById('messagesLog');
@@ -122,6 +126,8 @@
       }
 
       userBadge.textContent = `${auth.userId} (${auth.mode})`;
+      dashboardTitle.textContent = auth.mode === 'TZERO' ? 'TZero folders' : 'Elenco gare';
+      changeTzeroRootBtn.classList.toggle('d-none', auth.mode !== 'TZERO');
       return auth;
     }
 
@@ -184,8 +190,23 @@
       return response.json();
     }
 
+    async function updateTZeroRoot(rootFolder) {
+      const response = await fetch('/api/tzero/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rootFolder })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Errore configurazione TZero');
+      }
+      return data;
+    }
+
     function renderGare(gare) {
       gareBody.innerHTML = '';
+      const auth = readAuthSession();
+      const isTZeroMode = auth && auth.mode === 'TZERO';
 
       gare.forEach((gara) => {
         const row = document.createElement('tr');
@@ -194,7 +215,7 @@
           <td>${gara.id}</td>
           <td>${gara.eventName}</td>
           <td>${gara.eventDate}</td>
-          <td class="text-end"><button class="btn btn-sm btn-primary" type="button">Seleziona</button></td>
+          <td class="text-end"><button class="btn btn-sm btn-primary" type="button">${isTZeroMode ? 'Select' : 'Seleziona'}</button></td>
         `;
 
         row.addEventListener('click', () => selectGara(gara, row));
@@ -292,6 +313,30 @@
       try {
         const gare = await loadGare();
         renderGare(gare);
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    changeTzeroRootBtn.addEventListener('click', async () => {
+      const current = readAuthSession();
+      if (!current || current.mode !== 'TZERO') {
+        return;
+      }
+      const nextRoot = window.prompt('TZero root folder', '');
+      if (nextRoot == null) {
+        return;
+      }
+      const trimmed = nextRoot.trim();
+      if (!trimmed) {
+        appendWsMessage('TZero root folder is required');
+        return;
+      }
+      try {
+        await updateTZeroRoot(trimmed);
+        const gare = await loadGare();
+        renderGare(gare);
+        appendWsMessage('TZero root folder updated');
       } catch (error) {
         appendWsMessage(error.message);
       }

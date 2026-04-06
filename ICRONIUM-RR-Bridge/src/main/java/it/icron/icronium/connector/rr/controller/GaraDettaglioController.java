@@ -8,6 +8,7 @@ import it.icron.icronium.connector.rr.model.GaraDettaglioRow;
 import it.icron.icronium.connector.rr.model.GaraSyncResponse;
 import it.icron.icronium.connector.rr.model.LocalFileRequest;
 import it.icron.icronium.connector.rr.model.RemoteFileRequest;
+import it.icron.icronium.connector.rr.model.SimulatedFileRequest;
 import it.icron.icronium.connector.rr.model.TimingPointResponse;
 import it.icron.icronium.connector.rr.model.UpdateTimingPointRequest;
 import org.springframework.http.HttpStatusCode;
@@ -125,6 +126,17 @@ public class GaraDettaglioController {
     public ResponseEntity<List<GaraDettaglioRow>> addFilePassaggi(@PathVariable String eventId, @RequestBody FilePassaggiRequest request) {
         try {
             return ResponseEntity.ok(rrGaraDettaglioService.addFilePassaggi(eventId, request));
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return ResponseEntity.status(HttpStatusCode.valueOf(e.getStatusCode().value())).build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/{eventId}/simulated-file")
+    public ResponseEntity<List<GaraDettaglioRow>> addSimulatedFile(@PathVariable String eventId, @RequestBody SimulatedFileRequest request) {
+        try {
+            return ResponseEntity.ok(rrGaraDettaglioService.addSimulatedFile(eventId, request));
         } catch (org.springframework.web.server.ResponseStatusException e) {
             return ResponseEntity.status(HttpStatusCode.valueOf(e.getStatusCode().value())).build();
         } catch (Exception e) {

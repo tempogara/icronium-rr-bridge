@@ -135,6 +135,10 @@ public class PostUploader {
     }
 
     private static void sendBatch(ConnectorContext ctx, List<String> batch) throws Exception {
+        if (ctx.isSimulateOnly()) {
+            log.info("POST simulated: batchSize={}", batch.size());
+            return;
+        }
         String url = ctx.getBaseUrl()
                 + "times/add?lang=en&contestFilter=0&IgnoreBibToBibAssign=1";
         String body = "[" + String.join(",", batch) + "]";

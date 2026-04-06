@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Timing Point View</title>
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-icronium.svg">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
@@ -134,6 +135,23 @@
     .mono {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
+    .tp-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .tp-move-controls {
+      display: flex;
+      gap: 4px;
+      flex: 0 0 auto;
+    }
+    .tp-move-btn {
+      min-width: 28px;
+      padding: 0.1rem 0.35rem;
+      font-size: 0.78rem;
+      line-height: 1.1;
+    }
     .minute-chart-wrap {
       width: 100%;
       min-width: 720px;
@@ -195,6 +213,7 @@
       color: #6c757d;
       font-size: 0.9rem;
     }
+    .source-simulated { background: #0f766e; }
     #tpViewBody td {
       padding-top: 1rem;
       padding-bottom: 1rem;
@@ -241,6 +260,9 @@
         <span id="rrIdLabel" class="rrid-label"></span>
         <button id="syncBtn" class="btn btn-outline-secondary">SYNC</button>
         <button id="refreshBtn" class="btn btn-outline-secondary">Refresh</button>
+        <label for="startTimeInput" class="mb-0 fw-semibold ms-2">Start time:</label>
+        <input id="startTimeInput" type="text" class="form-control form-control-sm" style="width: 110px;" placeholder="00:00:00">
+        <button id="resetStartTimeBtn" class="btn btn-outline-secondary btn-sm" type="button">Reset</button>
         <span id="groupCountBadge" class="badge text-bg-secondary ms-auto">Timing points: 0</span>
       </div>
     </div>
@@ -352,7 +374,9 @@
   <script>
     const STORAGE_KEYS = {
       auth: 'rr.auth',
-      selectedGara: 'rr.selectedGara'
+      selectedGara: 'rr.selectedGara',
+      startTimePrefix: 'rr.tpview.startTime.',
+      groupOrderPrefix: 'rr.tpview.groupOrder.'
     };
 
     const rrIdLabel = document.getElementById('rrIdLabel');
@@ -365,6 +389,8 @@
     const backToMenuBtn = document.getElementById('backToMenuBtn');
     const syncBtn = document.getElementById('syncBtn');
     const refreshBtn = document.getElementById('refreshBtn');
+    const startTimeInput = document.getElementById('startTimeInput');
+    const resetStartTimeBtn = document.getElementById('resetStartTimeBtn');
     const groupCountBadge = document.getElementById('groupCountBadge');
     const tpViewBody = document.getElementById('tpViewBody');
     const messagesPanel = document.getElementById('messagesPanel');
@@ -388,6 +414,7 @@
     let tpUniqueNewestFirst = true;
     let tpUniqueFilter = '';
     let minuteChartBatchSignature = '';
+    let chartStartTimeSeconds = null;
 
     function getEventId() {
       const params = new URLSearchParams(window.location.search);
@@ -401,6 +428,19 @@
         return false;
       }
       return true;
+    }
+
+    function getStoredAuth() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEYS.auth) || 'null');
+      } catch (_error) {
+        return null;
+      }
+    }
+
+    function applyModeVisibility() {
+      const auth = getStoredAuth();
+      btnOpenRr.classList.toggle('d-none', !auth || auth.mode === 'TZERO');
     }
 
     function redirectToLogin() {
@@ -456,6 +496,95 @@
       }
       eventNameText.textContent = '';
       eventDateText.textContent = '';
+    }
+
+    function startTimeStorageKey() {
+      const eventId = getEventId() || 'default';
+      return `${STORAGE_KEYS.startTimePrefix}${eventId}`;
+    }
+
+    function groupOrderStorageKey() {
+      const eventId = getEventId() || 'default';
+      return `${STORAGE_KEYS.groupOrderPrefix}${eventId}`;
+    }
+
+    function saveStartTimeSelection(raw) {
+      const value = (raw || '').trim();
+      if (!value) {
+        localStorage.removeItem(startTimeStorageKey());
+        return;
+      }
+      localStorage.setItem(startTimeStorageKey(), value);
+    }
+
+    function restoreStartTimeSelection() {
+      const saved = (localStorage.getItem(startTimeStorageKey()) || '').trim();
+      if (!saved) {
+        chartStartTimeSeconds = null;
+        startTimeInput.value = '';
+        return;
+      }
+      const parsed = parseStartTimeToSeconds(saved);
+      if (!Number.isFinite(parsed)) {
+        localStorage.removeItem(startTimeStorageKey());
+        chartStartTimeSeconds = null;
+        startTimeInput.value = '';
+        return;
+      }
+      chartStartTimeSeconds = parsed;
+      startTimeInput.value = saved;
+    }
+
+    function saveGroupOrder(groups) {
+      const order = (groups || [])
+        .map((group) => group && group.timingPoint ? String(group.timingPoint) : '')
+        .filter((timingPoint) => timingPoint);
+      if (!order.length) {
+        localStorage.removeItem(groupOrderStorageKey());
+        return;
+      }
+      localStorage.setItem(groupOrderStorageKey(), JSON.stringify(order));
+    }
+
+    function applyStoredGroupOrder(groups) {
+      const list = Array.isArray(groups) ? [...groups] : [];
+      let savedOrder;
+      try {
+        savedOrder = JSON.parse(localStorage.getItem(groupOrderStorageKey()) || '[]');
+      } catch (_error) {
+        savedOrder = [];
+      }
+      if (!Array.isArray(savedOrder) || !savedOrder.length) {
+        return list;
+      }
+      const orderMap = new Map(savedOrder.map((timingPoint, index) => [String(timingPoint), index]));
+      return list.sort((left, right) => {
+        const leftKey = String(left && left.timingPoint ? left.timingPoint : '');
+        const rightKey = String(right && right.timingPoint ? right.timingPoint : '');
+        const leftIndex = orderMap.has(leftKey) ? orderMap.get(leftKey) : Number.MAX_SAFE_INTEGER;
+        const rightIndex = orderMap.has(rightKey) ? orderMap.get(rightKey) : Number.MAX_SAFE_INTEGER;
+        if (leftIndex !== rightIndex) {
+          return leftIndex - rightIndex;
+        }
+        return leftKey.localeCompare(rightKey);
+      });
+    }
+
+    function moveGroup(groups, timingPoint, direction) {
+      const list = Array.isArray(groups) ? [...groups] : [];
+      const index = list.findIndex((group) => String(group && group.timingPoint ? group.timingPoint : '') === String(timingPoint || ''));
+      if (index < 0) {
+        return list;
+      }
+      const delta = direction === 'up' ? -1 : 1;
+      const targetIndex = index + delta;
+      if (targetIndex < 0 || targetIndex >= list.length) {
+        return list;
+      }
+      const [group] = list.splice(index, 1);
+      list.splice(targetIndex, 0, group);
+      saveGroupOrder(list);
+      return list;
     }
 
     function appendWsMessage(text) {
@@ -686,6 +815,45 @@
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
     }
 
+    function parseStartTimeToSeconds(value) {
+      const match = String(value || '').trim().match(/^(\d{2}):(\d{2}):(\d{2})$/);
+      if (!match) {
+        return null;
+      }
+      const hours = Number(match[1]);
+      const minutes = Number(match[2]);
+      const seconds = Number(match[3]);
+      if (hours > 23 || minutes > 59 || seconds > 59) {
+        return null;
+      }
+      return (hours * 3600) + (minutes * 60) + seconds;
+    }
+
+    function extractTimeOfDaySeconds(timestamp) {
+      const match = String(timestamp || '').match(/(\d{2}):(\d{2})(?::(\d{2}))?/);
+      if (!match) {
+        return null;
+      }
+      const hours = Number(match[1]);
+      const minutes = Number(match[2]);
+      const seconds = Number(match[3] || '0');
+      if (hours > 23 || minutes > 59 || seconds > 59) {
+        return null;
+      }
+      return (hours * 3600) + (minutes * 60) + seconds;
+    }
+
+    function passesChartStartTime(timestamp) {
+      if (!Number.isFinite(chartStartTimeSeconds)) {
+        return true;
+      }
+      const timeOfDaySeconds = extractTimeOfDaySeconds(timestamp);
+      if (!Number.isFinite(timeOfDaySeconds)) {
+        return false;
+      }
+      return timeOfDaySeconds >= chartStartTimeSeconds;
+    }
+
     function buildSharedTimeline(firstMinute, latestMinute) {
       const timeline = [];
       const safeFirst = firstMinute instanceof Date && !Number.isNaN(firstMinute.getTime())
@@ -781,7 +949,11 @@
                 if (chip && blacklisted.has(chip)) {
                   return;
                 }
-                const minuteDate = parseTimestampToMinute(extractTimestampFromPassingLine(line));
+                const timestamp = extractTimestampFromPassingLine(line);
+                if (!passesChartStartTime(timestamp)) {
+                  return;
+                }
+                const minuteDate = parseTimestampToMinute(timestamp);
                 if (!minuteDate) {
                   return;
                 }
@@ -862,7 +1034,8 @@
 
     function renderGroups(rows) {
       currentRows = Array.isArray(rows) ? [...rows] : [];
-      const groups = groupRowsByTimingPoint(currentRows);
+      const groups = applyStoredGroupOrder(groupRowsByTimingPoint(currentRows));
+      saveGroupOrder(groups);
       groupCountBadge.textContent = `Timing points: ${groups.length}`;
       tpViewBody.innerHTML = '';
       if (groups.length === 0) {
@@ -871,13 +1044,30 @@
         tpViewBody.appendChild(tr);
         return;
       }
-      groups.forEach((group) => {
+      groups.forEach((group, index) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="fw-semibold">${escapeHtml(group.timingPoint)}</td>
+          <td>
+            <div class="tp-header">
+              <div class="fw-semibold">${escapeHtml(group.timingPoint)}</div>
+              <div class="tp-move-controls">
+                <button class="btn btn-sm btn-outline-secondary tp-move-btn move-group-btn" data-direction="up" ${index === 0 ? 'disabled' : ''} title="Move up">↑</button>
+                <button class="btn btn-sm btn-outline-secondary tp-move-btn move-group-btn" data-direction="down" ${index === groups.length - 1 ? 'disabled' : ''} title="Move down">↓</button>
+              </div>
+            </div>
+          </td>
           <td>${renderTotals(group)}</td>
           <td><div class="minute-chart-wrap" data-chart-key="${escapeHtml(group.timingPoint)}" data-chart-batch="${escapeHtml(buildBatchSignature(groups))}"><div class="minute-chart-loading">Loading minute chart...</div></div></td>
         `;
+        const moveButtons = tr.querySelectorAll('.move-group-btn');
+        moveButtons.forEach((button) => {
+          button.addEventListener('click', () => {
+            const reordered = moveGroup(groups, group.timingPoint, button.dataset.direction);
+            groupCountBadge.textContent = `Timing points: ${reordered.length}`;
+            tpViewBody.innerHTML = '';
+            renderGroups(currentRows);
+          });
+        });
         const readBtn = tr.querySelector('.show-tp-read-btn');
         if (readBtn) {
           readBtn.addEventListener('click', async () => {
@@ -1052,6 +1242,34 @@
       renderGroups(currentRows);
     }
 
+    function applyStartTimeSelection() {
+      const raw = (startTimeInput.value || '').trim();
+      if (!raw) {
+        chartStartTimeSeconds = null;
+        saveStartTimeSelection('');
+        renderGroups(currentRows);
+        return;
+      }
+      const parsed = parseStartTimeToSeconds(raw);
+      if (!Number.isFinite(parsed)) {
+        appendWsMessage('Start time format must be HH:mm:ss');
+        return;
+      }
+      chartStartTimeSeconds = parsed;
+      startTimeInput.value = raw;
+      saveStartTimeSelection(raw);
+      renderGroups(currentRows);
+      appendWsMessage(`Chart start time set to ${raw}`);
+    }
+
+    function resetStartTimeSelection() {
+      chartStartTimeSeconds = null;
+      startTimeInput.value = '';
+      saveStartTimeSelection('');
+      renderGroups(currentRows);
+      appendWsMessage('Chart start time reset');
+    }
+
     function connectWebSocket() {
       const socket = new SockJS('/ws');
       const client = new StompJs.Client({
@@ -1147,6 +1365,20 @@
       }
     });
 
+    startTimeInput.addEventListener('change', () => {
+      applyStartTimeSelection();
+    });
+
+    startTimeInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        applyStartTimeSelection();
+      }
+    });
+
+    resetStartTimeBtn.addEventListener('click', () => {
+      resetStartTimeSelection();
+    });
+
     messagesToggleBtn.addEventListener('click', () => {
       setMessagesCollapsed(!messagesPanel.classList.contains('is-collapsed'));
     });
@@ -1165,6 +1397,8 @@
       if (!requireLogin()) {
         return;
       }
+      applyModeVisibility();
+      restoreStartTimeSelection();
       setMessagesCollapsed(localStorage.getItem('rr.tpview.messagesCollapsed') === '1');
       startKeepAlive();
       loadEventMeta();

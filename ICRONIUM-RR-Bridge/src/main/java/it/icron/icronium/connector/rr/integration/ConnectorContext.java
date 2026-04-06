@@ -13,6 +13,7 @@ public class ConnectorContext {
     private String rrId;
     private String baseUrl;
     private String pw;
+    private boolean simulateOnly;
 
     private List<String> timingPoints = new ArrayList<>();
     //private Map<Integer, String> bibChipMap = new LinkedHashMap<>();
@@ -100,6 +101,14 @@ public class ConnectorContext {
 	public RaceResultClient getRr() {
 		return rr;
 	}
+
+    public boolean isSimulateOnly() {
+        return simulateOnly;
+    }
+
+    public void setSimulateOnly(boolean simulateOnly) {
+        this.simulateOnly = simulateOnly;
+    }
 
     private String extractQueryParam(String query, String key) {
         if (query == null || query.isBlank() || key == null || key.isBlank()) {

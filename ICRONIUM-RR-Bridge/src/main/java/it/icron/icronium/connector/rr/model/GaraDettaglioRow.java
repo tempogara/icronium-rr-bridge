@@ -7,6 +7,7 @@ public class GaraDettaglioRow {
 
     private String rowId;
     private String source;
+    private String sourceKind;
     private String timingPoint;
     private String syncOffset = "+00:00:00.000";
     private String stato;
@@ -23,6 +24,7 @@ public class GaraDettaglioRow {
     private List<String> blacklistedCodes = new ArrayList<>();
     private long processedLines;
     private long uploadedLines;
+    private int uniqueCount;
     private boolean errorState;
     private String lastErrorMessage;
 
@@ -55,6 +57,14 @@ public class GaraDettaglioRow {
 
     public void setSource(String source) {
         this.source = source;
+    }
+
+    public String getSourceKind() {
+        return sourceKind;
+    }
+
+    public void setSourceKind(String sourceKind) {
+        this.sourceKind = sourceKind;
     }
 
     public String getTimingPoint() {
@@ -183,6 +193,14 @@ public class GaraDettaglioRow {
 
     public void setUploadedLines(long uploadedLines) {
         this.uploadedLines = uploadedLines;
+    }
+
+    public int getUniqueCount() {
+        return uniqueCount;
+    }
+
+    public void setUniqueCount(int uniqueCount) {
+        this.uniqueCount = uniqueCount;
     }
 
     public boolean isErrorState() {

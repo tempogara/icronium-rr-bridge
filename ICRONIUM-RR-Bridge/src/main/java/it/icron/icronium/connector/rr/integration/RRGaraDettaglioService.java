@@ -13,6 +13,7 @@ import it.icron.icronium.connector.rr.model.GaraSyncResponse;
 import it.icron.icronium.connector.rr.model.ChatMessage;
 import it.icron.icronium.connector.rr.model.LocalFileRequest;
 import it.icron.icronium.connector.rr.model.RemoteFileRequest;
+import it.icron.icronium.connector.rr.model.SimulatedFileRequest;
 import it.icron.icronium.connector.rr.model.TimingPointResponse;
 import it.icron.icronium.connector.rr.model.UpdateTimingPointRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -26,17 +27,20 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -49,17 +53,23 @@ public class RRGaraDettaglioService {
     private static final Logger log = LoggerFactory.getLogger(RRGaraDettaglioService.class);
 
     private final RRSessionService sessionService;
+    private final TZeroConfigService tZeroConfigService;
+    private final ActiveEventService activeEventService;
     private final ObjectMapper objectMapper;
     private final GaraDettaglioRepository repository;
     private final SimpMessagingTemplate messagingTemplate;
     private final Map<String, Boolean> rowExecutionLocks = new ConcurrentHashMap<>();
     private static final DateTimeFormatter DOWNLOAD_TS_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter SIMULATED_TS_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    private static final DateTimeFormatter SIMULATED_INPUT_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm[:ss]");
     private static final int MAX_DELTA_HISTORY = 10;
     private static final int MAX_CONTENT_PREVIEW_CHARS = 200_000;
     private static final Pattern SYNC_OFFSET_PATTERN = Pattern.compile("^[+-]\\d{2}:\\d{2}:\\d{2}\\.\\d{3}$");
 
-    public RRGaraDettaglioService(RRSessionService sessionService, ObjectMapper objectMapper, GaraDettaglioRepository repository, SimpMessagingTemplate messagingTemplate) {
+    public RRGaraDettaglioService(RRSessionService sessionService, TZeroConfigService tZeroConfigService, ActiveEventService activeEventService, ObjectMapper objectMapper, GaraDettaglioRepository repository, SimpMessagingTemplate messagingTemplate) {
         this.sessionService = sessionService;
+        this.tZeroConfigService = tZeroConfigService;
+        this.activeEventService = activeEventService;
         this.objectMapper = objectMapper;
         this.repository = repository;
         this.messagingTemplate = messagingTemplate;
@@ -67,6 +77,7 @@ public class RRGaraDettaglioService {
 
     public GaraDettaglioResponse loadDettaglio(String eventId) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
 
         String rrIdUrl = buildEventLandingUrl(eventId);
         Optional<GaraDettaglioSnapshot> maybeSnapshot = repository.findByEventId(eventId);
@@ -82,6 +93,19 @@ public class RRGaraDettaglioService {
                     snapshot.getScartiCount(),
                     snapshot.getRows()
             );
+        }
+
+        if (sessionService.isTZeroMode()) {
+            GaraDettaglioSnapshot snapshot = new GaraDettaglioSnapshot(
+                    eventId,
+                    0,
+                    0,
+                    0,
+                    new ArrayList<>()
+            );
+            enrichSnapshotConnectionFromSession(snapshot);
+            repository.save(snapshot);
+            return new GaraDettaglioResponse(eventId, rrIdUrl, 0, 0, 0, new ArrayList<>());
         }
 
         String baseApi = buildEventApiUrl(eventId);
@@ -117,6 +141,11 @@ public class RRGaraDettaglioService {
 
     public GaraSyncResponse sync(String eventId) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
+
+        if (sessionService.isTZeroMode()) {
+            return syncTZero(eventId);
+        }
 
         String baseApi = buildEventApiUrl(eventId);
         String participantsCsv = sessionService.getClient().getData(baseApi
@@ -142,27 +171,44 @@ public class RRGaraDettaglioService {
         return new GaraSyncResponse(eventId, rrIdUrl, participantsCount, timingPoints);
     }
 
-    public TimingPointResponse getTimingPoints(String eventId) {
+    public TimingPointResponse getTimingPoints(String eventId) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
         RRGaraSyncData syncData = sessionService.getSyncData(eventId);
-        if (syncData == null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Nessun dato in sessione: eseguire prima SYNC");
+        if (syncData != null) {
+            List<String> timingPoints = syncData.getTimingPoints();
+            return new TimingPointResponse(eventId, timingPoints.size(), timingPoints);
         }
-        List<String> timingPoints = syncData.getTimingPoints();
-        return new TimingPointResponse(eventId, timingPoints.size(), timingPoints);
+        Optional<GaraDettaglioSnapshot> snapshot = repository.findByEventId(eventId);
+        if (snapshot.isPresent()) {
+            List<String> timingPoints = snapshot.get().getRows().stream()
+                    .map(GaraDettaglioRow::getTimingPoint)
+                    .filter(value -> value != null && !value.isBlank())
+                    .distinct()
+                    .toList();
+            return new TimingPointResponse(eventId, timingPoints.size(), timingPoints);
+        }
+        throw new ResponseStatusException(HttpStatus.CONFLICT, "Nessun dato in sessione: eseguire prima SYNC");
     }
 
-    public BibChipResponse getBibChip(String eventId) {
+    public BibChipResponse getBibChip(String eventId) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
         RRGaraSyncData syncData = sessionService.getSyncData(eventId);
-        if (syncData == null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Nessun dato in sessione: eseguire prima SYNC");
+        if (syncData != null) {
+            return new BibChipResponse(eventId, syncData.getParticipantsCount(), syncData.getBibChipRows());
         }
-        return new BibChipResponse(eventId, syncData.getParticipantsCount(), syncData.getBibChipRows());
+        Optional<GaraDettaglioSnapshot> snapshot = repository.findByEventId(eventId);
+        if (snapshot.isPresent()) {
+            List<BibChipRow> rows = snapshot.get().getBibChipRows() == null ? new ArrayList<>() : snapshot.get().getBibChipRows();
+            return new BibChipResponse(eventId, rows.size(), rows);
+        }
+        throw new ResponseStatusException(HttpStatus.CONFLICT, "Nessun dato in sessione: eseguire prima SYNC");
     }
 
     public List<GaraDettaglioRow> getPersistedRows(String eventId) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
         Optional<GaraDettaglioSnapshot> snapshot = repository.findByEventId(eventId);
         if (snapshot.isEmpty()) {
             return new ArrayList<>();
@@ -176,6 +222,7 @@ public class RRGaraDettaglioService {
 
     public String getRowFileContent(String eventId, String rowId) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
         GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nessuna riga salvata"));
         GaraDettaglioRow row = snapshot.getRows().stream()
@@ -216,11 +263,12 @@ public class RRGaraDettaglioService {
 
     public List<GaraDettaglioRow> addRemoteFile(String eventId, RemoteFileRequest request) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
 
         if (request == null || request.getUrl() == null || request.getUrl().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "URL file remoto obbligatorio");
         }
-        if (request.getTimingPoint() == null || request.getTimingPoint().isBlank()) {
+        if (!sessionService.isTZeroMode() && (request.getTimingPoint() == null || request.getTimingPoint().isBlank())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Timing point obbligatorio");
         }
 
@@ -231,7 +279,7 @@ public class RRGaraDettaglioService {
         rows.add(new GaraDettaglioRow(
                 UUID.randomUUID().toString(),
                 request.getUrl().trim(),
-                request.getTimingPoint().trim(),
+                request.getTimingPoint() == null ? "" : request.getTimingPoint().trim(),
                 "Stopped",
                 60,
                 "",
@@ -239,6 +287,7 @@ public class RRGaraDettaglioService {
                 0,
                 0
         ));
+        rows.get(rows.size() - 1).setSourceKind("web");
         rows.get(rows.size() - 1).setSyncOffset("+00:00:00.000");
 
         snapshot.setRows(rows);
@@ -249,11 +298,12 @@ public class RRGaraDettaglioService {
 
     public List<GaraDettaglioRow> addLocalFile(String eventId, LocalFileRequest request) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
 
         if (request == null || request.getLocalPath() == null || request.getLocalPath().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Path file locale obbligatorio");
         }
-        if (request.getTimingPoint() == null || request.getTimingPoint().isBlank()) {
+        if (!sessionService.isTZeroMode() && (request.getTimingPoint() == null || request.getTimingPoint().isBlank())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Timing point obbligatorio");
         }
 
@@ -264,7 +314,7 @@ public class RRGaraDettaglioService {
         rows.add(new GaraDettaglioRow(
                 UUID.randomUUID().toString(),
                 request.getLocalPath().trim(),
-                request.getTimingPoint().trim(),
+                request.getTimingPoint() == null ? "" : request.getTimingPoint().trim(),
                 "Stopped",
                 60,
                 "",
@@ -272,6 +322,7 @@ public class RRGaraDettaglioService {
                 0,
                 0
         ));
+        rows.get(rows.size() - 1).setSourceKind("local");
         rows.get(rows.size() - 1).setSyncOffset("+00:00:00.000");
 
         snapshot.setRows(rows);
@@ -282,10 +333,11 @@ public class RRGaraDettaglioService {
 
     public List<GaraDettaglioRow> addFilePassaggi(String eventId, FilePassaggiRequest request) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
         if (request == null || request.getSource() == null || request.getSource().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Source obbligatorio (URL o path locale)");
         }
-        if (request.getTimingPoint() == null || request.getTimingPoint().isBlank()) {
+        if (!sessionService.isTZeroMode() && (request.getTimingPoint() == null || request.getTimingPoint().isBlank())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Timing point obbligatorio");
         }
 
@@ -296,7 +348,7 @@ public class RRGaraDettaglioService {
         rows.add(new GaraDettaglioRow(
                 UUID.randomUUID().toString(),
                 request.getSource().trim(),
-                request.getTimingPoint().trim(),
+                request.getTimingPoint() == null ? "" : request.getTimingPoint().trim(),
                 "Stopped",
                 sanitizeScaricaOgniSec(request.getScaricaOgniSec()),
                 "",
@@ -304,6 +356,7 @@ public class RRGaraDettaglioService {
                 0,
                 0
         ));
+        rows.get(rows.size() - 1).setSourceKind(resolveSourceKind(request.getSource().trim(), null));
         rows.get(rows.size() - 1).setSyncOffset(sanitizeSyncOffset(request.getSyncOffset()));
 
         snapshot.setRows(rows);
@@ -312,8 +365,82 @@ public class RRGaraDettaglioService {
         return rows;
     }
 
+    public List<GaraDettaglioRow> addSimulatedFile(String eventId, SimulatedFileRequest request) throws Exception {
+        sessionService.requireAuthenticated();
+        markEventActive(eventId);
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dati file simulato obbligatori");
+        }
+
+        String timingPoint = request.getTimingPoint() == null ? "" : request.getTimingPoint().trim();
+        if (!sessionService.isTZeroMode() && timingPoint.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Timing point obbligatorio");
+        }
+        LocalDateTime from = parseSimulatedTimestamp(request.getFromTimestamp(), "Timestamp iniziale obbligatorio");
+        LocalDateTime to = parseSimulatedTimestamp(request.getToTimestamp(), "Timestamp finale obbligatorio");
+        if (!to.isAfter(from)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La finestra oraria deve avere fine successiva all'inizio");
+        }
+        int intervalSeconds = sanitizeScaricaOgniSec(request.getIntervalSeconds());
+
+        GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
+                .orElseGet(() -> createSnapshotFromSession(eventId));
+        ensureRowIds(snapshot);
+
+        List<BibChipRow> bibChipRows = snapshot.getBibChipRows() == null ? new ArrayList<>() : snapshot.getBibChipRows();
+        if (bibChipRows.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Nessun partecipante disponibile: eseguire prima SYNC");
+        }
+
+        List<String> chips = bibChipRows.stream()
+                .map(BibChipRow::getChip)
+                .filter(value -> value != null && !value.isBlank())
+                .distinct()
+                .toList();
+        if (chips.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Nessun chip disponibile per generare il file simulato");
+        }
+
+        String normalizedFileName = normalizeSimulatedFileName(request.getFileName());
+        Path simulatedDir;
+        if (sessionService.isTZeroMode()) {
+            String rootFolder = sessionService.getTZeroRootFolder();
+            Path eventFolder = tZeroConfigService.getEventFolder(rootFolder, eventId);
+            simulatedDir = eventFolder.resolve("download");
+        } else {
+            simulatedDir = it.icron.icronium.connector.rr.IcroniumApplication.WORK_DIR
+                    .resolve("simulated")
+                    .resolve(eventId);
+        }
+        Files.createDirectories(simulatedDir);
+        Path simulatedFile = simulatedDir.resolve(normalizedFileName).normalize();
+
+        List<String> lines = generateSimulatedPassings(chips, from, to, intervalSeconds, eventId + ":" + normalizedFileName);
+        Files.write(simulatedFile, lines);
+
+        GaraDettaglioRow row = new GaraDettaglioRow(
+                UUID.randomUUID().toString(),
+                simulatedFile.toAbsolutePath().toString(),
+                timingPoint,
+                "Stopped",
+                intervalSeconds,
+                "",
+                0,
+                0,
+                0
+        );
+        row.setSourceKind("simulated");
+        row.setSyncOffset("+00:00:00.000");
+
+        snapshot.getRows().add(row);
+        enrichSnapshotConnectionFromSession(snapshot);
+        repository.save(snapshot);
+        return snapshot.getRows();
+    }
+
     public List<GaraDettaglioRow> deleteRow(String eventId, String rowId) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
         GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nessuna riga salvata"));
         ensureRowIds(snapshot);
@@ -324,6 +451,7 @@ public class RRGaraDettaglioService {
         if (!isStopped(row)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cancellazione consentita solo in stato Stopped");
         }
+        deleteSimulatedFileIfNeeded(row);
         snapshot.getRows().remove(row);
         enrichSnapshotConnectionFromSession(snapshot);
         repository.save(snapshot);
@@ -332,11 +460,15 @@ public class RRGaraDettaglioService {
 
     public List<GaraDettaglioRow> deleteAllRows(String eventId) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
         GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
                 .orElseGet(() -> createSnapshotFromSession(eventId));
         boolean hasRunning = snapshot.getRows().stream().anyMatch(this::isRunning);
         if (hasRunning) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cancellazione totale consentita solo con righe Stopped");
+        }
+        for (GaraDettaglioRow row : snapshot.getRows()) {
+            deleteSimulatedFileIfNeeded(row);
         }
         snapshot.setRows(new ArrayList<>());
         enrichSnapshotConnectionFromSession(snapshot);
@@ -346,6 +478,7 @@ public class RRGaraDettaglioService {
 
     public List<GaraDettaglioRow> applyActionToAll(String eventId, String action) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
         GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
                 .orElseGet(() -> createSnapshotFromSession(eventId));
         ensureRowIds(snapshot);
@@ -366,6 +499,7 @@ public class RRGaraDettaglioService {
 
     public List<GaraDettaglioRow> applyActionToRow(String eventId, String rowId, String action) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
         GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nessuna riga salvata"));
         ensureRowIds(snapshot);
@@ -388,7 +522,11 @@ public class RRGaraDettaglioService {
 
     public List<GaraDettaglioRow> updateRowTimingPoint(String eventId, String rowId, UpdateTimingPointRequest request) throws Exception {
         sessionService.requireAuthenticated();
-        if (request == null || request.getTimingPoint() == null || request.getTimingPoint().isBlank()) {
+        markEventActive(eventId);
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request obbligatoria");
+        }
+        if (!sessionService.isTZeroMode() && (request.getTimingPoint() == null || request.getTimingPoint().isBlank())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Timing point obbligatorio");
         }
         if (request.getSource() == null || request.getSource().isBlank()) {
@@ -405,7 +543,7 @@ public class RRGaraDettaglioService {
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "Modifica timing point consentita solo in stato Stopped");
                 }
                 row.setSource(request.getSource().trim());
-                row.setTimingPoint(request.getTimingPoint().trim());
+                row.setTimingPoint(request.getTimingPoint() == null ? "" : request.getTimingPoint().trim());
                 row.setScaricaOgniSec(sanitizeScaricaOgniSec(request.getScaricaOgniSec()));
                 row.setSyncOffset(sanitizeSyncOffset(request.getSyncOffset()));
                 found = true;
@@ -422,6 +560,7 @@ public class RRGaraDettaglioService {
 
     public List<GaraDettaglioRow> duplicateRow(String eventId, String rowId) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
         GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nessuna riga salvata"));
         ensureRowIds(snapshot);
@@ -442,6 +581,7 @@ public class RRGaraDettaglioService {
 
     public List<GaraDettaglioRow> moveRow(String eventId, String rowId, String direction) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
         GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nessuna riga salvata"));
         ensureRowIds(snapshot);
@@ -489,6 +629,7 @@ public class RRGaraDettaglioService {
 
     public List<GaraDettaglioRow> relinkRowToLocal(String eventId, String rowId) throws Exception {
         sessionService.requireAuthenticated();
+        markEventActive(eventId);
         GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nessuna riga salvata"));
         ensureRowIds(snapshot);
@@ -637,6 +778,12 @@ public class RRGaraDettaglioService {
         }
 
         String[] lines = csv.split("\\r?\\n");
+        int bibIndex = 0;
+        int chipIndex = 1;
+        int lastNameIndex = 2;
+        int firstNameIndex = 3;
+        boolean headerProcessed = false;
+
         for (String line : lines) {
             String trimmed = line.trim();
             if (trimmed.isEmpty()) {
@@ -649,10 +796,20 @@ public class RRGaraDettaglioService {
                 continue;
             }
 
-            String bibText = parts[0].trim();
-            String chipsText = parts[1].trim();
-            String lastName = parts.length > 2 ? parts[2].trim() : "";
-            String firstName = parts.length > 3 ? parts[3].trim() : "";
+            if (!headerProcessed && !isNumeric(parts[0].trim())) {
+                bibIndex = findColumnIndex(parts, "BIB", "PETT", "PETTORALE");
+                chipIndex = findColumnIndex(parts, "CHIP", "CHIPS", "TRANSPONDER");
+                lastNameIndex = findColumnIndex(parts, "LASTNAME", "COGNOME", "SURNAME");
+                firstNameIndex = findColumnIndex(parts, "FIRSTNAME", "NOME", "NAME");
+                headerProcessed = true;
+                continue;
+            }
+            headerProcessed = true;
+
+            String bibText = getColumnValue(parts, bibIndex);
+            String chipsText = getColumnValue(parts, chipIndex);
+            String lastName = getColumnValue(parts, lastNameIndex);
+            String firstName = getColumnValue(parts, firstNameIndex);
             if (chipsText.isEmpty()) {
                 continue;
             }
@@ -675,6 +832,140 @@ public class RRGaraDettaglioService {
         }
 
         return rows;
+    }
+
+    private boolean isNumeric(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            if (!Character.isDigit(value.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private int findColumnIndex(String[] headers, String... aliases) {
+        for (int i = 0; i < headers.length; i++) {
+            String header = headers[i] == null ? "" : headers[i].trim().toUpperCase();
+            for (String alias : aliases) {
+                if (header.equals(alias)) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private String getColumnValue(String[] parts, int index) {
+        if (index < 0 || index >= parts.length) {
+            return "";
+        }
+        return parts[index].trim();
+    }
+
+    private GaraSyncResponse syncTZero(String eventId) throws Exception {
+        String rootFolder = sessionService.getTZeroRootFolder();
+        Path eventFolder = tZeroConfigService.getEventFolder(rootFolder, eventId);
+        Path participantsFile = eventFolder.resolve("participants.csv");
+        if (!Files.exists(participantsFile) || !Files.isRegularFile(participantsFile)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "participants.csv non trovato nella cartella gara TZero");
+        }
+
+        String participantsCsv = Files.readString(participantsFile);
+        List<BibChipRow> bibChipRows = parseBibChipRows(participantsCsv);
+        int participantsCount = bibChipRows.size();
+
+        Path downloadFolder = eventFolder.resolve("download");
+        List<Path> filePaths = new ArrayList<>();
+        if (Files.isDirectory(downloadFolder)) {
+            try (Stream<Path> stream = Files.list(downloadFolder)) {
+                stream.filter(Files::isRegularFile)
+                        .filter(path -> path.getFileName().toString().startsWith("file-"))
+                        .filter(path -> {
+                            String fileName = path.getFileName().toString().toUpperCase();
+                            return !fileName.contains("MERGED") && !fileName.contains("CORREZIONI");
+                        })
+                        .sorted(Comparator.comparing(path -> path.getFileName().toString().toLowerCase()))
+                        .forEach(filePaths::add);
+            }
+        }
+
+        List<String> timingPoints = new ArrayList<>();
+        GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
+                .orElseGet(() -> createSnapshotFromSession(eventId));
+        ensureRowIds(snapshot);
+
+        Map<String, GaraDettaglioRow> existingBySource = new HashMap<>();
+        for (GaraDettaglioRow row : snapshot.getRows()) {
+            if (row.getSource() != null && !row.getSource().isBlank()) {
+                existingBySource.put(Paths.get(row.getSource()).toAbsolutePath().normalize().toString(), row);
+            }
+        }
+
+        List<GaraDettaglioRow> updatedRows = new ArrayList<>();
+        for (Path filePath : filePaths) {
+            String normalizedSource = filePath.toAbsolutePath().normalize().toString();
+            GaraDettaglioRow existing = existingBySource.get(normalizedSource);
+            if (existing != null) {
+                String currentTimingPoint = existing.getTimingPoint() == null ? "" : existing.getTimingPoint().trim();
+                if (currentTimingPoint.equals(legacyDerivedTZeroTimingPoint(filePath))) {
+                    existing.setTimingPoint("");
+                    currentTimingPoint = "";
+                }
+                updatedRows.add(existing);
+                if (!currentTimingPoint.isBlank()) {
+                    timingPoints.add(currentTimingPoint);
+                }
+                continue;
+            }
+
+            GaraDettaglioRow newRow = new GaraDettaglioRow(
+                    UUID.randomUUID().toString(),
+                    normalizedSource,
+                    "",
+                    "Stopped",
+                    10,
+                    "",
+                    0,
+                    0,
+                    0
+            );
+            newRow.setSourceKind("local");
+            newRow.setSyncOffset("+00:00:00.000");
+            updatedRows.add(newRow);
+        }
+
+        snapshot.setRows(updatedRows);
+        snapshot.setBibChipCount(participantsCount);
+        snapshot.setTimingPointCount((int) timingPoints.stream().filter(value -> value != null && !value.isBlank()).distinct().count());
+        snapshot.setBibChipRows(new ArrayList<>(bibChipRows));
+        enrichSnapshotConnectionFromSession(snapshot);
+        repository.save(snapshot);
+
+        List<String> distinctTimingPoints = timingPoints.stream()
+                .filter(value -> value != null && !value.isBlank())
+                .distinct()
+                .toList();
+        sessionService.saveSyncData(eventId, new RRGaraSyncData(participantsCount, distinctTimingPoints, bibChipRows));
+
+        return new GaraSyncResponse(eventId, buildEventLandingUrl(eventId), participantsCount, distinctTimingPoints);
+    }
+
+    private String legacyDerivedTZeroTimingPoint(Path filePath) {
+        if (filePath == null || filePath.getFileName() == null) {
+            return "";
+        }
+        String value = filePath.getFileName().toString();
+        if (value.startsWith("file-")) {
+            value = value.substring(5);
+        }
+        int dotIndex = value.lastIndexOf('.');
+        if (dotIndex > 0) {
+            value = value.substring(0, dotIndex);
+        }
+        return value.trim();
     }
 
     private GaraDettaglioSnapshot createSnapshotFromSession(String eventId) {
@@ -737,6 +1028,7 @@ public class RRGaraDettaglioService {
             }
             trimDeltaHistory(row);
             trimSentHistory(row);
+            row.setSourceKind(resolveSourceKind(row.getSource(), row.getSourceKind()));
         }
     }
 
@@ -775,6 +1067,7 @@ public class RRGaraDettaglioService {
                 row.setDiscardedLines(new ArrayList<>());
                 row.setProcessedLines(0);
                 row.setUploadedLines(0);
+                row.setUniqueCount(0);
                 row.setErrorState(false);
                 row.setLastErrorMessage(null);
                 break;
@@ -796,7 +1089,30 @@ public class RRGaraDettaglioService {
     }
 
     private String detectSourceType(String source) {
+        return resolveSourceKind(source, null);
+    }
+
+    private String resolveSourceKind(String source, String sourceKind) {
+        String explicit = sourceKind == null ? "" : sourceKind.trim().toLowerCase();
+        if ("simulated".equals(explicit)) {
+            return "simulated";
+        }
         String value = source == null ? "" : source.trim().toLowerCase();
+        String simulatedDir = it.icron.icronium.connector.rr.IcroniumApplication.WORK_DIR
+                .resolve("simulated")
+                .toAbsolutePath()
+                .normalize()
+                .toString()
+                .replace('\\', '/')
+                .toLowerCase();
+        String normalized = value.replace('\\', '/');
+        String fileName = extractFileName(source).toLowerCase();
+        if (fileName.startsWith("file-sim-")) {
+            return "simulated";
+        }
+        if (!simulatedDir.isBlank() && normalized.startsWith(simulatedDir)) {
+            return "simulated";
+        }
         if (value.contains("192.168.")) {
             return "lan";
         }
@@ -804,6 +1120,120 @@ public class RRGaraDettaglioService {
             return "web";
         }
         return "local";
+    }
+
+    private LocalDateTime parseSimulatedTimestamp(String value, String errorMessage) {
+        if (value == null || value.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage);
+        }
+        try {
+            return LocalDateTime.parse(value.trim(), SIMULATED_INPUT_FORMATTER);
+        } catch (DateTimeParseException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato timestamp non valido: usare yyyy-MM-ddTHH:mm:ss");
+        }
+    }
+
+    private String normalizeSimulatedFileName(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        if (value.isBlank()) {
+            value = "file-sim-generated.tags";
+        }
+        String lower = value.toLowerCase();
+        if (lower.startsWith("file-sim-")) {
+            // already normalized
+        } else if (lower.startsWith("file-")) {
+            value = "file-sim-" + value.substring(5);
+        } else {
+            value = "file-sim-" + value;
+        }
+        if (!value.toLowerCase().endsWith(".tags")) {
+            value = value + ".tags";
+        }
+        String sanitized = value.replace('\\', '/');
+        if (sanitized.contains("/")) {
+            sanitized = sanitized.substring(sanitized.lastIndexOf('/') + 1);
+        }
+        return sanitized;
+    }
+
+    private void deleteSimulatedFileIfNeeded(GaraDettaglioRow row) {
+        if (row == null || !"simulated".equalsIgnoreCase(resolveSourceKind(row.getSource(), row.getSourceKind()))) {
+            return;
+        }
+        String source = row.getSource() == null ? "" : row.getSource().trim();
+        if (source.isBlank()) {
+            return;
+        }
+        try {
+            Path path = Paths.get(source).toAbsolutePath().normalize();
+            Files.deleteIfExists(path);
+        } catch (Exception ex) {
+            log.warn("Delete simulated file skipped: source={} message={}", source, ex.getMessage());
+        }
+    }
+
+    private List<String> generateSimulatedPassings(List<String> chips, LocalDateTime from, LocalDateTime to, int intervalSeconds, String seedSource) {
+        List<String> orderedChips = new ArrayList<>(chips);
+        Collections.shuffle(orderedChips, new Random(seedSource.hashCode()));
+
+        long totalSeconds = Math.max(1, ChronoUnit.SECONDS.between(from, to));
+        int slots = Math.max(1, (int) Math.ceil(totalSeconds / (double) intervalSeconds) + 1);
+        double[] weights = new double[slots];
+        double sigma = Math.max(1.0, slots / 6.0);
+        double mean = (slots - 1) / 2.0;
+        double sum = 0.0;
+        for (int i = 0; i < slots; i++) {
+            double distance = (i - mean) / sigma;
+            weights[i] = Math.exp(-0.5 * distance * distance) + 0.08d;
+            sum += weights[i];
+        }
+
+        int[] counts = new int[slots];
+        double[] fractions = new double[slots];
+        int allocated = 0;
+        for (int i = 0; i < slots; i++) {
+            double exact = (weights[i] / sum) * orderedChips.size();
+            counts[i] = (int) Math.floor(exact);
+            fractions[i] = exact - counts[i];
+            allocated += counts[i];
+        }
+        while (allocated < orderedChips.size()) {
+            int bestIndex = 0;
+            for (int i = 1; i < slots; i++) {
+                if (fractions[i] > fractions[bestIndex]) {
+                    bestIndex = i;
+                }
+            }
+            counts[bestIndex]++;
+            fractions[bestIndex] = 0;
+            allocated++;
+        }
+
+        List<String> lines = new ArrayList<>(orderedChips.size());
+        Random random = new Random((seedSource + ":ts").hashCode());
+        int chipIndex = 0;
+        for (int slot = 0; slot < slots && chipIndex < orderedChips.size(); slot++) {
+            int count = counts[slot];
+            LocalDateTime slotStart = from.plusSeconds((long) slot * intervalSeconds);
+            if (slotStart.isAfter(to)) {
+                slotStart = to;
+            }
+            int spreadMillis = Math.max(1, intervalSeconds * 1000);
+            for (int i = 0; i < count && chipIndex < orderedChips.size(); i++) {
+                int offsetMillis = count <= 1 ? 0 : Math.min(spreadMillis - 1, (int) Math.round((i / (double) count) * spreadMillis));
+                offsetMillis = Math.min(spreadMillis - 1, Math.max(0, offsetMillis + random.nextInt(Math.max(1, spreadMillis / 6)) - Math.max(1, spreadMillis / 12)));
+                LocalDateTime ts = slotStart.plusNanos(offsetMillis * 1_000_000L);
+                if (ts.isAfter(to)) {
+                    ts = to;
+                }
+                lines.add(orderedChips.get(chipIndex++) + ";" + ts.format(SIMULATED_TS_FORMATTER));
+            }
+        }
+        Collections.sort(lines, Comparator.comparing(line -> {
+            String[] parts = line.split(";", 2);
+            return parts.length > 1 ? parts[1] : "";
+        }));
+        return lines;
     }
 
     private String extractFileName(String source) {
@@ -926,6 +1356,9 @@ public class RRGaraDettaglioService {
     }
 
     private String buildEventApiUrl(String eventId) {
+        if (sessionService.isTZeroMode()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "API RR non disponibile in modalità TZero");
+        }
         if (sessionService.isLocalMode()) {
             return "http://localhost/_" + eventId + "/api/";
         }
@@ -933,6 +1366,9 @@ public class RRGaraDettaglioService {
     }
 
     private String buildEventLandingUrl(String eventId) {
+        if (sessionService.isTZeroMode()) {
+            return eventId;
+        }
         String host = sessionService.isLocalMode() ? "http://localhost" : "https://events.raceresult.com";
         String pw = sessionService.isLocalMode() ? "0" : sessionService.getRrPw();
         return host + "/_" + eventId + "/?lang=en-it&pw=" + pw;
@@ -944,6 +1380,11 @@ public class RRGaraDettaglioService {
 
     private void enrichSnapshotConnectionFromSession(GaraDettaglioSnapshot snapshot) {
         if (snapshot == null) {
+            return;
+        }
+        if (sessionService.isTZeroMode()) {
+            snapshot.setRrHost("");
+            snapshot.setRrPw("");
             return;
         }
         String host = sessionService.isLocalMode() ? "http://localhost" : "https://events.raceresult.com";
@@ -958,31 +1399,40 @@ public class RRGaraDettaglioService {
     @Scheduled(fixedDelay = 1000)
     public void scheduledDownloadTick() {
         try {
-            List<GaraDettaglioSnapshot> snapshots = repository.findAll();
-            for (GaraDettaglioSnapshot snapshot : snapshots) {
-                if (snapshot.getRows() == null || snapshot.getRows().isEmpty()) {
+            String activeEventId = activeEventService.getActiveEventId();
+            if (activeEventId == null || activeEventId.isBlank()) {
+                return;
+            }
+            GaraDettaglioSnapshot snapshot = repository.findByEventId(activeEventId).orElse(null);
+            if (snapshot == null || snapshot.getRows() == null || snapshot.getRows().isEmpty()) {
+                return;
+            }
+
+            boolean snapshotChanged = false;
+            for (GaraDettaglioRow row : snapshot.getRows()) {
+                if (!isRunning(row)) {
                     continue;
                 }
-
-                boolean snapshotChanged = false;
-                for (GaraDettaglioRow row : snapshot.getRows()) {
-                    if (!isRunning(row)) {
-                        continue;
-                    }
-                    if (!isDueForDownload(row)) {
-                        continue;
-                    }
-                    boolean rowChanged = executeDownload(snapshot.getEventId(), row);
-                    snapshotChanged = snapshotChanged || rowChanged;
+                if (!isDueForDownload(row)) {
+                    continue;
                 }
+                boolean rowChanged = executeDownload(snapshot.getEventId(), row);
+                snapshotChanged = snapshotChanged || rowChanged;
+            }
 
-                if (snapshotChanged) {
-                    reconcileStoppedRows(snapshot);
-                    repository.save(snapshot);
-                }
+            if (snapshotChanged) {
+                reconcileStoppedRows(snapshot);
+                repository.save(snapshot);
             }
         } catch (Exception ignored) {
         }
+    }
+
+    private void markEventActive(String eventId) {
+        if (eventId == null || eventId.isBlank()) {
+            return;
+        }
+        activeEventService.setActiveEventId(eventId);
     }
 
     private void triggerDownloadNow(GaraDettaglioSnapshot snapshot, GaraDettaglioRow row) {
@@ -1038,6 +1488,7 @@ public class RRGaraDettaglioService {
 
             List<String> visibleLines = loadVisibleLines(downloadedPath, row);
             long lines = visibleLines.size();
+            row.setUniqueCount(countUniqueCodes(visibleLines));
             int previousLines = row.getRigheFile();
             List<String> downloadCycleLines = extractCycleLines(visibleLines, previousLines);
             row.setRigheFile((int) lines);
@@ -1103,6 +1554,20 @@ public class RRGaraDettaglioService {
             return new ArrayList<>();
         }
         return new ArrayList<>(visibleLines.subList(safePrevious, visibleLines.size()));
+    }
+
+    private int countUniqueCodes(List<String> visibleLines) {
+        if (visibleLines == null || visibleLines.isEmpty()) {
+            return 0;
+        }
+        java.util.Set<String> unique = new java.util.HashSet<>();
+        for (String line : visibleLines) {
+            String code = extractPassingCode(line);
+            if (code != null && !code.isBlank()) {
+                unique.add(code);
+            }
+        }
+        return unique.size();
     }
 
     private boolean isIgnoredPassingLine(String line, GaraDettaglioRow row) {

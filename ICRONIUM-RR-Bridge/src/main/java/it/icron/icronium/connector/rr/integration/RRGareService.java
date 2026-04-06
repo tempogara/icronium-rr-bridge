@@ -2,7 +2,6 @@ package it.icron.icronium.connector.rr.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import it.icron.icronium.connector.rr.AppLogger;
 import it.icron.icronium.connector.rr.model.Gara;
 import org.springframework.stereotype.Service;
@@ -16,15 +15,25 @@ import java.util.List;
 public class RRGareService {
 
     private final RRSessionService sessionService;
+    private final TZeroConfigService tZeroConfigService;
     private final ObjectMapper objectMapper;
 
-    public RRGareService(RRSessionService sessionService, ObjectMapper objectMapper) {
+    public RRGareService(RRSessionService sessionService, TZeroConfigService tZeroConfigService, ObjectMapper objectMapper) {
         this.sessionService = sessionService;
+        this.tZeroConfigService = tZeroConfigService;
         this.objectMapper = objectMapper;
     }
 
     public List<Gara> loadGareFromRR() throws Exception {
         sessionService.requireAuthenticated();
+
+        if (sessionService.isTZeroMode()) {
+            String rootFolder = sessionService.getTZeroRootFolder();
+            if (rootFolder == null || rootFolder.isBlank()) {
+                rootFolder = tZeroConfigService.getRootFolder();
+            }
+            return tZeroConfigService.loadGareFromRoot(rootFolder);
+        }
 
         String payload;
         if (sessionService.isLocalMode()) {

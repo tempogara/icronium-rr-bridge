@@ -4,7 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login RR</title>
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-icronium.svg">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .settings-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+  </style>
 </head>
 <body class="bg-light">
   <div class="container py-5">
@@ -12,24 +25,18 @@
       <div class="col-12 col-md-8 col-lg-5">
         <div class="card shadow-sm border-0">
           <div class="card-body p-4">
-            <div class="text-center mb-3">
+            <div class="d-flex justify-content-end mb-2">
+              <button id="rrSettingsBtn" type="button" class="btn btn-outline-secondary settings-btn" title="RR Online settings" aria-label="RR Online settings">⚙</button>
+            </div>
+            <div class="text-center mb-4">
               <img src="/images/icronium.png" alt="Icronium" style="max-height: 56px;">
             </div>
-            <h1 class="h4 mb-4 text-center">Accesso RR</h1>
-
-            <div class="mb-3">
-              <label for="userId" class="form-label">User ID</label>
-              <input type="text" class="form-control" id="userId" placeholder="Inserisci user id">
-            </div>
-
-            <div class="mb-4">
-              <label for="password" class="form-label">Password</label>
-              <input type="password" class="form-control" id="password" placeholder="Inserisci password">
-            </div>
+            <div class="text-center text-muted small mb-4">Version 1.0.3</div>
 
             <div class="d-grid gap-2">
-              <button id="loginBtn" type="button" class="btn btn-primary">Login a RR</button>
+              <button id="loginBtn" type="button" class="btn btn-primary">Login a RR online</button>
               <button id="localLoginBtn" type="button" class="btn btn-outline-secondary">Login a RR locale</button>
+              <button id="tzeroLoginBtn" type="button" class="btn btn-outline-dark">Login a TZero</button>
             </div>
 
           </div>
@@ -40,12 +47,63 @@
     </div>
   </div>
 
+  <div class="modal fade" id="tzeroModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">TZero Root Folder</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <label for="tzeroRootInput" class="form-label">TZero root folder</label>
+          <input id="tzeroRootInput" type="text" class="form-control" placeholder="/path/to/tzero/root">
+          <div class="form-text">The folder must contain one subfolder for each race.</div>
+        </div>
+        <div class="modal-footer">
+          <button id="saveTzeroLoginBtn" type="button" class="btn btn-primary">Login a TZero</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="rrCredentialsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">RR Online credentials</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="userId" class="form-label">User ID</label>
+            <input type="text" class="form-control" id="userId" placeholder="Enter user id">
+          </div>
+          <div class="mb-0">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" placeholder="Enter password">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="saveRrCredentialsBtn" type="button" class="btn btn-primary">Save credentials</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const loginBtn = document.getElementById('loginBtn');
     const localLoginBtn = document.getElementById('localLoginBtn');
+    const tzeroLoginBtn = document.getElementById('tzeroLoginBtn');
+    const rrSettingsBtn = document.getElementById('rrSettingsBtn');
+    const saveRrCredentialsBtn = document.getElementById('saveRrCredentialsBtn');
+    const saveTzeroLoginBtn = document.getElementById('saveTzeroLoginBtn');
+    const tzeroRootInput = document.getElementById('tzeroRootInput');
     const resultBox = document.getElementById('resultBox');
     const userIdInput = document.getElementById('userId');
     const passwordInput = document.getElementById('password');
+    const tzeroModal = new bootstrap.Modal(document.getElementById('tzeroModal'));
+    const rrCredentialsModal = new bootstrap.Modal(document.getElementById('rrCredentialsModal'));
 
     const STORAGE_KEYS = {
       userId: 'rr.userId',
@@ -66,8 +124,15 @@
       }
     }
 
+    function getStoredCredentials() {
+      return {
+        userId: (localStorage.getItem(STORAGE_KEYS.userId) || '').trim(),
+        password: localStorage.getItem(STORAGE_KEYS.password) || ''
+      };
+    }
+
     function saveCredentialsToStorage() {
-      localStorage.setItem(STORAGE_KEYS.userId, userIdInput.value);
+      localStorage.setItem(STORAGE_KEYS.userId, userIdInput.value.trim());
       localStorage.setItem(STORAGE_KEYS.password, passwordInput.value);
     }
 
@@ -87,6 +152,28 @@
       resultBox.classList.remove('d-none', 'alert-success', 'alert-danger');
       resultBox.classList.add(ok ? 'alert-success' : 'alert-danger');
       resultBox.textContent = text;
+    }
+
+    function clearResult() {
+      resultBox.classList.add('d-none');
+      resultBox.textContent = '';
+    }
+
+    function openRrCredentialsModal() {
+      loadCredentialsFromStorage();
+      clearResult();
+      rrCredentialsModal.show();
+    }
+
+    async function loginWithStoredCredentials() {
+      const { userId, password } = getStoredCredentials();
+      if (!userId || !password) {
+        openRrCredentialsModal();
+        return;
+      }
+      const data = await callApi('/api/auth/login', { userId, password });
+      saveAuthSession(data.mode, data.userId || userId);
+      goToDashboard();
     }
 
     async function callApi(url, payload) {
@@ -111,17 +198,37 @@
       return data;
     }
 
+    async function loadTZeroConfig() {
+      const response = await fetch('/api/tzero/config');
+      if (!response.ok) {
+        throw new Error('Errore caricamento configurazione TZero');
+      }
+      return response.json();
+    }
+
     loginBtn.addEventListener('click', async () => {
+      try {
+        await loginWithStoredCredentials();
+      } catch (error) {
+        showResult(false, error.message);
+      }
+    });
+
+    rrSettingsBtn.addEventListener('click', () => {
+      openRrCredentialsModal();
+    });
+
+    saveRrCredentialsBtn.addEventListener('click', async () => {
       const userId = userIdInput.value.trim();
       const password = passwordInput.value;
-
       if (!userId || !password) {
         showResult(false, 'Inserisci userId e password');
         return;
       }
-
       try {
         saveCredentialsToStorage();
+        rrCredentialsModal.hide();
+        clearResult();
         const data = await callApi('/api/auth/login', { userId, password });
         saveAuthSession(data.mode, data.userId || userId);
         goToDashboard();
@@ -141,8 +248,39 @@
       }
     });
 
-    userIdInput.addEventListener('input', saveCredentialsToStorage);
-    passwordInput.addEventListener('input', saveCredentialsToStorage);
+    tzeroLoginBtn.addEventListener('click', async () => {
+      try {
+        const data = await loadTZeroConfig();
+        const rootFolder = (data.rootFolder || '').trim();
+        if (!rootFolder) {
+          tzeroRootInput.value = '';
+          tzeroModal.show();
+          return;
+        }
+        const loginData = await callApi('/api/auth/login-tzero', { rootFolder });
+        saveAuthSession(loginData.mode, loginData.userId || 'tzero-user');
+        goToDashboard();
+      } catch (error) {
+        showResult(false, error.message);
+      }
+    });
+
+    saveTzeroLoginBtn.addEventListener('click', async () => {
+      const rootFolder = tzeroRootInput.value.trim();
+      if (!rootFolder) {
+        showResult(false, 'Inserisci la cartella root TZero');
+        return;
+      }
+      try {
+        const data = await callApi('/api/auth/login-tzero', { rootFolder });
+        saveAuthSession(data.mode, data.userId || 'tzero-user');
+        tzeroModal.hide();
+        goToDashboard();
+      } catch (error) {
+        showResult(false, error.message);
+      }
+    });
+
     loadCredentialsFromStorage();
   </script>
 </body>

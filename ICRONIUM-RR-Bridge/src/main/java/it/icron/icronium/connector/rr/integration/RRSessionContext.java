@@ -16,6 +16,7 @@ public class RRSessionContext {
     private String userId;
     private String mode;
     private String rrPw;
+    private String tzeroRootFolder;
     private boolean authenticated;
     private final Map<String, RRGaraSyncData> syncDataByEventId = new HashMap<>();
 
@@ -39,6 +40,10 @@ public class RRSessionContext {
         return authenticated;
     }
 
+    public String getTzeroRootFolder() {
+        return tzeroRootFolder;
+    }
+
     public void markRemoteLogin(String userId, String rrPw) {
         this.userId = userId;
         this.mode = "RR";
@@ -54,10 +59,20 @@ public class RRSessionContext {
         this.authenticated = true;
     }
 
+    public void markTZeroLogin(String rootFolder) {
+        this.userId = "tzero-user";
+        this.mode = "TZERO";
+        this.rrPw = null;
+        this.tzeroRootFolder = rootFolder;
+        this.raceResultClient.setPw(null);
+        this.authenticated = true;
+    }
+
     public void clear() {
         this.userId = null;
         this.mode = null;
         this.rrPw = null;
+        this.tzeroRootFolder = null;
         this.authenticated = false;
         this.raceResultClient.setPw(null);
         this.syncDataByEventId.clear();
@@ -69,5 +84,9 @@ public class RRSessionContext {
 
     public RRGaraSyncData getSyncData(String eventId) {
         return this.syncDataByEventId.get(eventId);
+    }
+
+    public void setTzeroRootFolder(String tzeroRootFolder) {
+        this.tzeroRootFolder = tzeroRootFolder;
     }
 }

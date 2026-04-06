@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Race Detail</title>
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-icronium.svg">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
@@ -108,6 +109,10 @@
       grid-template-columns: repeat(4, minmax(38px, auto));
       gap: 3px;
       min-width: 168px;
+    }
+    .totals-box.tzero {
+      grid-template-columns: repeat(3, minmax(38px, auto));
+      min-width: 126px;
     }
 
     .totals-head {
@@ -295,6 +300,7 @@
     .source-local { background: #198754; }
     .source-lan { background: #fd7e14; }
     .source-web { background: #0d6efd; }
+    .source-simulated { background: #0f766e; }
 
     .row-status {
       margin-top: 6px;
@@ -383,6 +389,7 @@
         <button id="btnBlacklist" class="btn btn-outline-secondary">Blacklist (0)</button>
         <button id="btnUnknownChips" class="btn btn-outline-secondary">Unknown chips (0)</button>
         <button id="btnAddFilePassaggi" class="btn btn-outline-secondary">Add passings file</button>
+        <button id="btnAddSimulatedFile" class="btn btn-outline-secondary">Add simulated file</button>
         <button id="btnLivePage" class="btn btn-outline-secondary">Open Live Page</button>
       </div>
     </div>
@@ -508,6 +515,44 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button id="saveFilePassaggiBtn" type="button" class="btn btn-primary">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="simulatedFileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add simulated file</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="simulatedFileNameInput" class="form-label">File name</label>
+            <input id="simulatedFileNameInput" class="form-control" type="text" placeholder="file-start.tags">
+            <div class="form-text">If missing, the app adds `file-` and `.tags` automatically.</div>
+          </div>
+          <div class="mb-3">
+            <label for="simulatedFileTpSelect" class="form-label">Timing point</label>
+            <select id="simulatedFileTpSelect" class="form-select"></select>
+          </div>
+          <div class="mb-3">
+            <label for="simulatedFromInput" class="form-label">From timestamp</label>
+            <input id="simulatedFromInput" class="form-control" type="datetime-local" step="1">
+          </div>
+          <div class="mb-3">
+            <label for="simulatedToInput" class="form-label">To timestamp</label>
+            <input id="simulatedToInput" class="form-control" type="datetime-local" step="1">
+          </div>
+          <div class="mb-0">
+            <label for="simulatedIntervalInput" class="form-label">Add rows every (seconds)</label>
+            <input id="simulatedIntervalInput" class="form-control" type="number" min="1" value="10">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button id="saveSimulatedFileBtn" type="button" class="btn btn-primary">Generate</button>
         </div>
       </div>
     </div>
@@ -743,16 +788,23 @@
     const btnBlacklist = document.getElementById('btnBlacklist');
     const btnUnknownChips = document.getElementById('btnUnknownChips');
     const btnAddFilePassaggi = document.getElementById('btnAddFilePassaggi');
+    const btnAddSimulatedFile = document.getElementById('btnAddSimulatedFile');
     const btnOpenRr = document.getElementById('btnOpenRr');
     const btnRrLive = document.getElementById('btnRrLive');
     const btnTpView = document.getElementById('btnTpView');
     const btnFileView = document.getElementById('btnFileView');
     const btnLivePage = document.getElementById('btnLivePage');
     const saveFilePassaggiBtn = document.getElementById('saveFilePassaggiBtn');
+    const saveSimulatedFileBtn = document.getElementById('saveSimulatedFileBtn');
     const filePassaggiSourceInput = document.getElementById('filePassaggiSourceInput');
     const filePassaggiTpSelect = document.getElementById('filePassaggiTpSelect');
     const filePassaggiSyncInput = document.getElementById('filePassaggiSyncInput');
     const filePassaggiScaricaOgniInput = document.getElementById('filePassaggiScaricaOgniInput');
+    const simulatedFileNameInput = document.getElementById('simulatedFileNameInput');
+    const simulatedFileTpSelect = document.getElementById('simulatedFileTpSelect');
+    const simulatedFromInput = document.getElementById('simulatedFromInput');
+    const simulatedToInput = document.getElementById('simulatedToInput');
+    const simulatedIntervalInput = document.getElementById('simulatedIntervalInput');
     const startAllBtn = document.getElementById('startAllBtn');
     const stopAllBtn = document.getElementById('stopAllBtn');
     const rewindAllBtn = document.getElementById('rewindAllBtn');
@@ -789,6 +841,7 @@
     const tpModal = new bootstrap.Modal(document.getElementById('tpModal'));
     const bibChipModal = new bootstrap.Modal(document.getElementById('bibChipModal'));
     const filePassaggiModal = new bootstrap.Modal(document.getElementById('filePassaggiModal'));
+    const simulatedFileModal = new bootstrap.Modal(document.getElementById('simulatedFileModal'));
     const editTimingPointModal = new bootstrap.Modal(document.getElementById('editTimingPointModal'));
     const discardedModal = new bootstrap.Modal(document.getElementById('discardedModal'));
     const sourceContentModal = new bootstrap.Modal(document.getElementById('sourceContentModal'));
@@ -845,6 +898,24 @@
         return false;
       }
       return true;
+    }
+
+    function getStoredAuth() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEYS.auth) || 'null');
+      } catch (_error) {
+        return null;
+      }
+    }
+
+    function isTZeroMode() {
+      const auth = getStoredAuth();
+      return !!auth && auth.mode === 'TZERO';
+    }
+
+    function applyModeVisibility() {
+      const auth = getStoredAuth();
+      btnOpenRr.classList.toggle('d-none', !auth || auth.mode === 'TZERO');
     }
 
     function redirectToLogin() {
@@ -1119,6 +1190,7 @@
     }
 
     function renderDeltaCells(row) {
+      const tzero = isTZeroMode();
       const downloadDeltas = Array.isArray(row && row.downloadDeltas) ? row.downloadDeltas.slice(-10) : [];
       const sentDeltas = Array.isArray(row && row.sentDeltas) ? row.sentDeltas.slice(-10) : [];
       const values = downloadDeltas.map((value, index) => ({ value, cycleIndex: index }));
@@ -1155,7 +1227,7 @@
       }).join('');
       return `<div class="delta-group">
         <div class="delta-row-wrap"><span class="delta-label">DL</span><div class="delta-grid">${cells}</div></div>
-        <div class="delta-row-wrap"><span class="delta-label">OUT</span><div class="delta-grid">${sentCells}</div></div>
+        ${tzero ? '' : `<div class="delta-row-wrap"><span class="delta-label">OUT</span><div class="delta-grid">${sentCells}</div></div>`}
       </div>`;
     }
 
@@ -1163,8 +1235,10 @@
       const rowId = row && row.rowId ? row.rowId : '';
       const source = row && row.source ? row.source : '';
       const type = detectSourceType(source);
-      const iconClass = type === 'local' ? 'source-local' : (type === 'lan' ? 'source-lan' : 'source-web');
-      const iconText = type === 'local' ? 'L' : (type === 'lan' ? 'N' : 'W');
+      const iconClass = type === 'simulated'
+        ? 'source-simulated'
+        : (type === 'local' ? 'source-local' : (type === 'lan' ? 'source-lan' : 'source-web'));
+      const iconText = type === 'simulated' ? 'S' : (type === 'local' ? 'L' : (type === 'lan' ? 'N' : 'W'));
       const fileName = extractFileName(source);
       const safeSource = source || '';
       const scaricaOgniSec = row && row.scaricaOgniSec;
@@ -1242,6 +1316,10 @@
 
     function detectSourceType(source) {
       const value = (source || '').trim().toLowerCase();
+      const fileName = extractFileName(source).toLowerCase();
+      if (fileName.startsWith('file-sim-') || value.includes('/icronium-work/simulated/') || value.includes('\\icronium-work\\simulated\\')) {
+        return 'simulated';
+      }
       if (value.includes('192.168.')) {
         return 'lan';
       }
@@ -1263,10 +1341,11 @@
     }
 
     function renderTotals(row) {
+      const tzero = isTZeroMode();
       const read = Number.isFinite(Number(row && row.righeFile)) ? Number(row.righeFile) : 0;
       const sent = Number.isFinite(Number(row && row.righePo)) ? Number(row.righePo) : 0;
       const discarded = visibleDiscardedLines(row).length;
-      const unique = countUniqueChips(row);
+      const unique = Number.isFinite(Number(row && row.uniqueCount)) ? Number(row.uniqueCount) : 0;
       const readClass = read > 0 ? 'totals-value totals-green' : 'totals-value';
       let sentClass = 'totals-value totals-red';
       if (sent > 0 && sent < read) {
@@ -1280,6 +1359,16 @@
         : (discarded > 0
           ? 'btn btn-sm btn-danger totals-button show-discarded-btn'
           : 'btn btn-sm btn-outline-secondary totals-button show-discarded-btn');
+      if (tzero) {
+        return `<div class="totals-box tzero">
+          <span class="totals-head">READ</span>
+          <span class="totals-head">DISC</span>
+          <span class="totals-head">UNIQUE</span>
+          <span class="${readClass}" title="Read"><button type="button" class="totals-value-btn show-read-content-btn">${read}</button></span>
+          <button type="button" class="${discardedBtnClass}" title="Discarded">${discarded}</button>
+          <span class="${uniqueClass}" title="Unique chips"><button type="button" class="totals-value-btn show-unique-chips-btn">${unique}</button></span>
+        </div>`;
+      }
       return `<div class="totals-box">
         <span class="totals-head">READ</span>
         <span class="totals-head">SENT</span>
@@ -1290,20 +1379,6 @@
         <button type="button" class="${discardedBtnClass}" title="Discarded">${discarded}</button>
         <span class="${uniqueClass}" title="Unique chips"><button type="button" class="totals-value-btn show-unique-chips-btn">${unique}</button></span>
       </div>`;
-    }
-
-    function countUniqueChips(row) {
-      const unique = new Set();
-      const details = Array.isArray(row && row.downloadCycleDetails) ? row.downloadCycleDetails : [];
-      details.forEach((cycleLines) => {
-        (Array.isArray(cycleLines) ? cycleLines : []).forEach((line) => {
-          const chip = extractChipFromPassingLine(line);
-          if (chip) {
-            unique.add(chip);
-          }
-        });
-      });
-      return unique.size;
     }
 
     function openDiscardedModal(row) {
@@ -1815,7 +1890,7 @@
       if (!source) {
         throw new Error('Enter URL or local file path');
       }
-      if (!timingPoint) {
+      if (!isTZeroMode() && !timingPoint) {
         throw new Error('Select a timing point');
       }
       if (!/^[+-]\d{2}:\d{2}:\d{2}\.\d{3}$/.test(syncOffset)) {
@@ -1840,6 +1915,92 @@
       }
       if (!response.ok) {
         throw new Error('Error while saving passings file');
+      }
+
+      return response.json();
+    }
+
+    function formatDateTimeLocalValue(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    }
+
+    async function openSimulatedFileModal() {
+      simulatedFileTpSelect.innerHTML = '';
+      if (isTZeroMode()) {
+        const blankOption = document.createElement('option');
+        blankOption.value = '';
+        blankOption.textContent = '(Optional)';
+        simulatedFileTpSelect.appendChild(blankOption);
+      }
+
+      try {
+        const tpData = await loadTimingPoints();
+        (tpData.timingPoints || []).forEach((tp) => {
+          const option = document.createElement('option');
+          option.value = tp;
+          option.textContent = tp;
+          simulatedFileTpSelect.appendChild(option);
+        });
+      } catch (error) {
+        if (!isTZeroMode()) {
+          throw error;
+        }
+      }
+
+      if (!isTZeroMode() && !simulatedFileTpSelect.value) {
+        throw new Error('No timing points available. Run SYNC first.');
+      }
+      const now = new Date();
+      const from = new Date(now.getTime());
+      const to = new Date(now.getTime() + (60 * 60 * 1000));
+      simulatedFileNameInput.value = '';
+      simulatedFromInput.value = formatDateTimeLocalValue(from);
+      simulatedToInput.value = formatDateTimeLocalValue(to);
+      simulatedIntervalInput.value = '10';
+      simulatedFileModal.show();
+    }
+
+    async function saveSimulatedFile() {
+      const eventId = getEventId();
+      const fileName = simulatedFileNameInput.value.trim();
+      const timingPoint = simulatedFileTpSelect.value;
+      const fromTimestamp = simulatedFromInput.value;
+      const toTimestamp = simulatedToInput.value;
+      const intervalSeconds = Number(simulatedIntervalInput.value || 10);
+      if (!isTZeroMode() && !timingPoint) {
+        throw new Error('Select a timing point');
+      }
+      if (!fromTimestamp || !toTimestamp) {
+        throw new Error('Set both timestamps');
+      }
+      if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
+        throw new Error('"Add rows every" value is not valid');
+      }
+
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/simulated-file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName, timingPoint, fromTimestamp, toTimestamp, intervalSeconds })
+      });
+
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (response.status === 400) {
+        throw new Error('Invalid simulated file data');
+      }
+      if (response.status === 409) {
+        throw new Error('Run SYNC first to load participants');
+      }
+      if (!response.ok) {
+        throw new Error('Error while generating simulated file');
       }
 
       return response.json();
@@ -1971,15 +2132,27 @@
     }
 
     async function openFilePassaggiModal() {
-      const tpData = await loadTimingPoints();
       filePassaggiTpSelect.innerHTML = '';
-      (tpData.timingPoints || []).forEach((tp) => {
-        const option = document.createElement('option');
-        option.value = tp;
-        option.textContent = tp;
-        filePassaggiTpSelect.appendChild(option);
-      });
-      if (!filePassaggiTpSelect.value) {
+      if (isTZeroMode()) {
+        const blankOption = document.createElement('option');
+        blankOption.value = '';
+        blankOption.textContent = '(Optional)';
+        filePassaggiTpSelect.appendChild(blankOption);
+      }
+      try {
+        const tpData = await loadTimingPoints();
+        (tpData.timingPoints || []).forEach((tp) => {
+          const option = document.createElement('option');
+          option.value = tp;
+          option.textContent = tp;
+          filePassaggiTpSelect.appendChild(option);
+        });
+      } catch (error) {
+        if (!isTZeroMode()) {
+          throw error;
+        }
+      }
+      if (!isTZeroMode() && !filePassaggiTpSelect.value) {
         throw new Error('No timing points available. Run SYNC first.');
       }
 
@@ -1990,19 +2163,31 @@
     }
 
     async function openEditTimingPointModal(rowId, currentSource, currentTimingPoint, currentScaricaOgniSec, currentSyncOffset) {
-      const tpData = await loadTimingPoints();
       editTpSelect.innerHTML = '';
-      (tpData.timingPoints || []).forEach((tp) => {
-        const option = document.createElement('option');
-        option.value = tp;
-        option.textContent = tp;
-        editTpSelect.appendChild(option);
-      });
-      if (!editTpSelect.value) {
+      if (isTZeroMode()) {
+        const blankOption = document.createElement('option');
+        blankOption.value = '';
+        blankOption.textContent = '(Optional)';
+        editTpSelect.appendChild(blankOption);
+      }
+      try {
+        const tpData = await loadTimingPoints();
+        (tpData.timingPoints || []).forEach((tp) => {
+          const option = document.createElement('option');
+          option.value = tp;
+          option.textContent = tp;
+          editTpSelect.appendChild(option);
+        });
+      } catch (error) {
+        if (!isTZeroMode()) {
+          throw error;
+        }
+      }
+      if (!isTZeroMode() && !editTpSelect.value) {
         throw new Error('No timing points available. Run SYNC first.');
       }
 
-      if (currentTimingPoint) {
+      if (currentTimingPoint || isTZeroMode()) {
         editTpSelect.value = currentTimingPoint;
       }
       editSourceInput.value = currentSource || '';
@@ -2119,6 +2304,14 @@
       }
     });
 
+    btnAddSimulatedFile.addEventListener('click', async () => {
+      try {
+        await openSimulatedFileModal();
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
     btnRrLive.addEventListener('click', () => {
       const eventId = getEventId();
       window.location.href = eventId
@@ -2179,6 +2372,17 @@
       }
     });
 
+    saveSimulatedFileBtn.addEventListener('click', async () => {
+      try {
+        const rows = await saveSimulatedFile();
+        renderRows(rows);
+        simulatedFileModal.hide();
+        appendWsMessage('Simulated file generated');
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
     saveEditTpBtn.addEventListener('click', async () => {
       if (!editingRowId) {
         return;
@@ -2196,6 +2400,10 @@
       }
       if (!/^[+-]\d{2}:\d{2}:\d{2}\.\d{3}$/.test(syncOffset)) {
         appendWsMessage('Sync offset format must be +/- hh:mm:ss.sss');
+        return;
+      }
+      if (!isTZeroMode() && !editTpSelect.value) {
+        appendWsMessage('Timing point is required');
         return;
       }
       try {
@@ -2257,6 +2465,7 @@
         return;
       }
 
+      applyModeVisibility();
       setMessagesCollapsed(localStorage.getItem('rr.messagesCollapsed') === '1');
       startKeepAlive();
       loadEventMeta();

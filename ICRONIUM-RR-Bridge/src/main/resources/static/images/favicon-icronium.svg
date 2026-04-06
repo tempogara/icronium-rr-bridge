@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Icronium</title>
+  <g fill="none" stroke="#111111" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="10" y="10" width="44" height="44" rx="14"/>
+    <path d="M32 32 L32 21"/>
+    <path d="M32 32 L40 37"/>
+  </g>
+  <g fill="#111111">
+    <circle cx="32" cy="8.5" r="1.9"/>
+    <circle cx="43.75" cy="11.65" r="1.9"/>
+    <circle cx="52.35" cy="20.25" r="1.9"/>
+    <circle cx="55.5" cy="32" r="1.9"/>
+    <circle cx="52.35" cy="43.75" r="1.9"/>
+    <circle cx="43.75" cy="52.35" r="1.9"/>
+    <circle cx="32" cy="55.5" r="1.9"/>
+    <circle cx="20.25" cy="52.35" r="1.9"/>
+    <circle cx="11.65" cy="43.75" r="1.9"/>
+    <circle cx="8.5" cy="32" r="1.9"/>
+    <circle cx="11.65" cy="20.25" r="1.9"/>
+    <circle cx="20.25" cy="11.65" r="1.9"/>
+    <circle cx="32" cy="32" r="2.3"/>
+  </g>
+</svg>

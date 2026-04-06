@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>File View</title>
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-icronium.svg">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
@@ -70,6 +71,11 @@
       min-width: 248px;
       max-width: 296px;
     }
+    .totals-box.tzero {
+      grid-template-columns: repeat(3, minmax(52px, 1fr));
+      min-width: 186px;
+      max-width: 222px;
+    }
     .totals-head {
       font-size: 0.72rem;
       font-weight: 700;
@@ -131,6 +137,66 @@
       border-color: #0b5ed7;
       color: #ffffff;
     }
+    .delta-grid {
+      display: grid;
+      grid-template-columns: repeat(10, minmax(34px, 1fr));
+      gap: 3px;
+      min-width: 378px;
+    }
+    .delta-group {
+      display: grid;
+      gap: 3px;
+      min-width: 430px;
+      margin-top: 6px;
+    }
+    .delta-row-wrap {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      align-items: center;
+      gap: 4px;
+    }
+    .delta-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #495057;
+      text-transform: uppercase;
+      text-align: right;
+    }
+    .delta-cell {
+      border: 1px solid #d6dae0;
+      border-radius: 4px;
+      background: #f8f9fb;
+      padding: 3px 6px;
+      text-align: center;
+      font-size: 0.74rem;
+      line-height: 1.1;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      white-space: nowrap;
+    }
+    .delta-cell-btn {
+      width: 100%;
+      padding: 2px 4px;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      line-height: 1.1;
+    }
+    .delta-cell-btn:hover {
+      text-decoration: underline;
+    }
+    .delta-cell-positive {
+      background: #1f9d55;
+      border-color: #18804a;
+      color: #ffffff;
+      font-weight: 700;
+    }
+    .delta-cell-warning {
+      background: #f2c94c;
+      border-color: #dfb52f;
+      color: #1f2327;
+      font-weight: 700;
+    }
     .mono {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
@@ -138,7 +204,9 @@
       font-size: 1.02rem;
       font-weight: 700;
       color: #1f2937;
-      word-break: break-word;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .file-meta {
       margin-top: 4px;
@@ -185,6 +253,7 @@
     .source-local { background: #198754; }
     .source-lan { background: #fd7e14; }
     .source-web { background: #0d6efd; }
+    .source-simulated { background: #0f766e; }
     .file-header {
       display: flex;
       align-items: flex-start;
@@ -272,6 +341,34 @@
       color: #6c757d;
       font-size: 0.9rem;
     }
+    .file-visibility-list {
+      display: grid;
+      gap: 8px;
+      max-height: 55vh;
+      overflow-y: auto;
+    }
+    .file-visibility-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 10px;
+      border: 1px solid #dfe3e8;
+      border-radius: 8px;
+      background: #f8f9fb;
+    }
+    .file-visibility-name {
+      min-width: 0;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-visibility-meta {
+      font-size: 0.78rem;
+      color: #6c757d;
+      white-space: nowrap;
+    }
     #tpViewBody td {
       padding-top: 0.45rem;
       padding-bottom: 0.45rem;
@@ -314,8 +411,10 @@
         <span id="rrIdLabel" class="rrid-label"></span>
         <button id="syncBtn" class="btn btn-outline-secondary">SYNC</button>
         <button id="refreshBtn" class="btn btn-outline-secondary">Refresh</button>
+        <button id="filterFilesBtn" class="btn btn-outline-secondary btn-sm px-2" type="button">Files</button>
         <label for="startTimeInput" class="mb-0 fw-semibold ms-2">Start time:</label>
         <input id="startTimeInput" type="text" class="form-control form-control-sm" style="width: 110px;" placeholder="00:00:00">
+        <button id="applyStartTimeBtn" class="btn btn-outline-secondary btn-sm" type="button">Apply</button>
         <button id="resetStartTimeBtn" class="btn btn-outline-secondary btn-sm" type="button">Reset</button>
         <span id="groupCountBadge" class="badge text-bg-secondary ms-auto">Files: 0</span>
       </div>
@@ -422,13 +521,65 @@
     </div>
   </div>
 
+  <div class="modal fade" id="cycleDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 id="cycleDetailsTitle" class="modal-title">Cycle details</h5>
+            <div id="cycleDetailsSubtitle" class="small text-muted mt-1"></div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="table-responsive" style="max-height: 65vh;">
+            <table class="table table-striped table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 80px;">#</th>
+                  <th>Passing</th>
+                  <th style="width: 30%;">Athlete</th>
+                </tr>
+              </thead>
+              <tbody id="cycleDetailsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="fileVisibilityModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title">Visible files</h5>
+            <div class="small text-muted mt-1">Choose which files to show in File View.</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex justify-content-end gap-2 mb-3">
+            <button id="showAllFilesBtn" type="button" class="btn btn-sm btn-outline-secondary">Show all</button>
+            <button id="hideAllFilesBtn" type="button" class="btn btn-sm btn-outline-secondary">Hide all</button>
+          </div>
+          <div id="fileVisibilityList" class="file-visibility-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const STORAGE_KEYS = {
       auth: 'rr.auth',
-      selectedGara: 'rr.selectedGara'
+      selectedGara: 'rr.selectedGara',
+      startTimePrefix: 'rr.fileview.startTime.',
+      rowOrderPrefix: 'rr.fileview.rowOrder.',
+      hiddenFilesPrefix: 'rr.fileview.hiddenFiles.'
     };
 
     const rrIdLabel = document.getElementById('rrIdLabel');
@@ -441,7 +592,9 @@
     const backToMenuBtn = document.getElementById('backToMenuBtn');
     const syncBtn = document.getElementById('syncBtn');
     const refreshBtn = document.getElementById('refreshBtn');
+    const filterFilesBtn = document.getElementById('filterFilesBtn');
     const startTimeInput = document.getElementById('startTimeInput');
+    const applyStartTimeBtn = document.getElementById('applyStartTimeBtn');
     const resetStartTimeBtn = document.getElementById('resetStartTimeBtn');
     const groupCountBadge = document.getElementById('groupCountBadge');
     const tpViewBody = document.getElementById('tpViewBody');
@@ -459,6 +612,14 @@
     const tpUniqueOrderBtn = document.getElementById('tpUniqueOrderBtn');
     const tpUniqueFilterInput = document.getElementById('tpUniqueFilterInput');
     const tpUniqueModal = new bootstrap.Modal(document.getElementById('tpUniqueModal'));
+    const cycleDetailsTitle = document.getElementById('cycleDetailsTitle');
+    const cycleDetailsSubtitle = document.getElementById('cycleDetailsSubtitle');
+    const cycleDetailsBody = document.getElementById('cycleDetailsBody');
+    const cycleDetailsModal = new bootstrap.Modal(document.getElementById('cycleDetailsModal'));
+    const fileVisibilityList = document.getElementById('fileVisibilityList');
+    const showAllFilesBtn = document.getElementById('showAllFilesBtn');
+    const hideAllFilesBtn = document.getElementById('hideAllFilesBtn');
+    const fileVisibilityModal = new bootstrap.Modal(document.getElementById('fileVisibilityModal'));
 
     let currentRows = [];
     let keepAliveTimerId = null;
@@ -467,6 +628,7 @@
     let tpUniqueFilter = '';
     let minuteChartBatchSignature = '';
     let chartStartTimeSeconds = null;
+    let hiddenRowIds = new Set();
 
     function getEventId() {
       const params = new URLSearchParams(window.location.search);
@@ -480,6 +642,24 @@
         return false;
       }
       return true;
+    }
+
+    function getStoredAuth() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEYS.auth) || 'null');
+      } catch (_error) {
+        return null;
+      }
+    }
+
+    function applyModeVisibility() {
+      const auth = getStoredAuth();
+      btnOpenRr.classList.toggle('d-none', !auth || auth.mode === 'TZERO');
+    }
+
+    function isTZeroSession() {
+      const auth = getStoredAuth();
+      return !!auth && auth.mode === 'TZERO';
     }
 
     function redirectToLogin() {
@@ -535,6 +715,131 @@
       }
       eventNameText.textContent = '';
       eventDateText.textContent = '';
+    }
+
+    function startTimeStorageKey() {
+      const eventId = getEventId() || 'default';
+      return `${STORAGE_KEYS.startTimePrefix}${eventId}`;
+    }
+
+    function rowOrderStorageKey() {
+      const eventId = getEventId() || 'default';
+      return `${STORAGE_KEYS.rowOrderPrefix}${eventId}`;
+    }
+
+    function hiddenFilesStorageKey() {
+      const eventId = getEventId() || 'default';
+      return `${STORAGE_KEYS.hiddenFilesPrefix}${eventId}`;
+    }
+
+    function saveStartTimeSelection(raw) {
+      const value = (raw || '').trim();
+      if (!value) {
+        localStorage.removeItem(startTimeStorageKey());
+        return;
+      }
+      localStorage.setItem(startTimeStorageKey(), value);
+    }
+
+    function restoreStartTimeSelection() {
+      const saved = (localStorage.getItem(startTimeStorageKey()) || '').trim();
+      if (!saved) {
+        chartStartTimeSeconds = null;
+        startTimeInput.value = '';
+        return;
+      }
+      const parsed = parseStartTimeToSeconds(saved);
+      if (!Number.isFinite(parsed)) {
+        localStorage.removeItem(startTimeStorageKey());
+        chartStartTimeSeconds = null;
+        startTimeInput.value = '';
+        return;
+      }
+      chartStartTimeSeconds = parsed;
+      startTimeInput.value = saved;
+    }
+
+    function loadHiddenFiles() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(hiddenFilesStorageKey()) || '[]');
+        hiddenRowIds = new Set(Array.isArray(saved) ? saved.map((value) => String(value)) : []);
+      } catch (_error) {
+        hiddenRowIds = new Set();
+      }
+    }
+
+    function saveHiddenFiles() {
+      if (!hiddenRowIds.size) {
+        localStorage.removeItem(hiddenFilesStorageKey());
+        return;
+      }
+      localStorage.setItem(hiddenFilesStorageKey(), JSON.stringify(Array.from(hiddenRowIds)));
+    }
+
+    function isRowVisible(row) {
+      const rowId = row && row.rowId ? String(row.rowId) : '';
+      return !rowId || !hiddenRowIds.has(rowId);
+    }
+
+    function saveRowOrder(rows) {
+      const order = (rows || [])
+        .map((row) => row && row.rowId ? String(row.rowId) : '')
+        .filter((rowId) => rowId);
+      if (!order.length) {
+        localStorage.removeItem(rowOrderStorageKey());
+        return;
+      }
+      localStorage.setItem(rowOrderStorageKey(), JSON.stringify(order));
+    }
+
+    function applyStoredRowOrder(rows) {
+      const list = Array.isArray(rows) ? [...rows] : [];
+      let savedOrder;
+      try {
+        savedOrder = JSON.parse(localStorage.getItem(rowOrderStorageKey()) || '[]');
+      } catch (_error) {
+        savedOrder = [];
+      }
+      if (!Array.isArray(savedOrder) || !savedOrder.length) {
+        return list;
+      }
+      const orderMap = new Map(savedOrder.map((rowId, index) => [String(rowId), index]));
+      return list.sort((left, right) => {
+        const leftIndex = orderMap.has(String(left && left.rowId ? left.rowId : '')) ? orderMap.get(String(left.rowId)) : Number.MAX_SAFE_INTEGER;
+        const rightIndex = orderMap.has(String(right && right.rowId ? right.rowId : '')) ? orderMap.get(String(right.rowId)) : Number.MAX_SAFE_INTEGER;
+        if (leftIndex !== rightIndex) {
+          return leftIndex - rightIndex;
+        }
+        return 0;
+      });
+    }
+
+    function updateStoredRowOrderForMove(rowId, direction) {
+      const targetRowId = String(rowId || '');
+      if (!targetRowId) {
+        return;
+      }
+      let savedOrder;
+      try {
+        savedOrder = JSON.parse(localStorage.getItem(rowOrderStorageKey()) || '[]');
+      } catch (_error) {
+        savedOrder = [];
+      }
+      if (!Array.isArray(savedOrder) || !savedOrder.length) {
+        savedOrder = currentRows
+          .map((row) => row && row.rowId ? String(row.rowId) : '')
+          .filter((value) => value);
+      }
+      const index = savedOrder.indexOf(targetRowId);
+      if (index < 0) {
+        return;
+      }
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= savedOrder.length) {
+        return;
+      }
+      [savedOrder[index], savedOrder[targetIndex]] = [savedOrder[targetIndex], savedOrder[index]];
+      localStorage.setItem(rowOrderStorageKey(), JSON.stringify(savedOrder));
     }
 
     function appendWsMessage(text) {
@@ -713,6 +1018,10 @@
 
     function detectSourceType(source) {
       const value = (source || '').trim().toLowerCase();
+      const fileName = extractFileName(source).toLowerCase();
+      if (fileName.startsWith('file-sim-') || value.includes('/icronium-work/simulated/') || value.includes('\\icronium-work\\simulated\\')) {
+        return 'simulated';
+      }
       if (value.includes('192.168.')) {
         return 'lan';
       }
@@ -724,6 +1033,9 @@
 
     function sourceTypeView(source) {
       const type = detectSourceType(source);
+      if (type === 'simulated') {
+        return { text: 'S', className: 'source-simulated' };
+      }
       if (type === 'lan') {
         return { text: 'N', className: 'source-lan' };
       }
@@ -996,6 +1308,7 @@
       const sent = Number(row && row.righePo) || 0;
       const discarded = visibleDiscardedLines(row).length;
       const unique = countUniqueChips(row);
+      const tzero = isTZeroSession();
       const readClass = read > 0 ? 'totals-value totals-green' : 'totals-value';
       let sentClass = 'totals-value totals-red';
       if (sent > 0 && sent < read) {
@@ -1005,7 +1318,16 @@
       }
       const uniqueClass = unique > 0 ? 'totals-value totals-blue' : 'totals-value';
       const discardedClass = discarded > 0 ? 'btn btn-sm btn-danger totals-button' : 'btn btn-sm btn-outline-secondary totals-button';
-      return `<div class="totals-box">
+      const totalsHtml = tzero
+        ? `<div class="totals-box tzero">
+        <span class="totals-head">READ</span>
+        <span class="totals-head">DISC</span>
+        <span class="totals-head">UNIQUE</span>
+        <span class="${readClass}"><button type="button" class="totals-value-btn show-tp-read-btn">${read}</button></span>
+        <button type="button" class="${discardedClass}" disabled>${discarded}</button>
+        <span class="${uniqueClass}"><button type="button" class="totals-value-btn show-tp-unique-btn">${unique}</button></span>
+      </div>`
+        : `<div class="totals-box">
         <span class="totals-head">READ</span>
         <span class="totals-head">SENT</span>
         <span class="totals-head">DISC</span>
@@ -1014,6 +1336,52 @@
         <span class="${sentClass}">${sent}</span>
         <button type="button" class="${discardedClass}" disabled>${discarded}</button>
         <span class="${uniqueClass}"><button type="button" class="totals-value-btn show-tp-unique-btn">${unique}</button></span>
+      </div>`;
+      return `${totalsHtml}${renderLastCycles(row)}`;
+    }
+
+    function renderLastCycles(row) {
+      const tzero = isTZeroSession();
+      const downloadDeltas = Array.isArray(row && row.downloadDeltas) ? row.downloadDeltas.slice(-10) : [];
+      const sentDeltas = Array.isArray(row && row.sentDeltas) ? row.sentDeltas.slice(-10) : [];
+      const downloadValues = downloadDeltas.map((value, index) => ({ value, cycleIndex: index }));
+      const sentValues = sentDeltas.map((value, index) => ({ value, cycleIndex: index }));
+      while (downloadValues.length < 10) {
+        downloadValues.unshift({ value: 0, cycleIndex: -(10 - downloadValues.length) });
+      }
+      while (sentValues.length < 10) {
+        sentValues.unshift({ value: 0, cycleIndex: -(10 - sentValues.length) });
+      }
+      const downloadHtml = downloadValues.map((entry) => {
+        const value = Number(entry.value) || 0;
+        const cssClass = value > 0 ? 'delta-cell delta-cell-positive' : 'delta-cell';
+        if (entry.cycleIndex < 0) {
+          return `<span class="${cssClass}">${value}</span>`;
+        }
+        return `<span class="${cssClass}"><button type="button" class="delta-cell-btn show-cycle-detail-btn" data-kind="download" data-cycle-index="${entry.cycleIndex}">${value}</button></span>`;
+      }).join('');
+      const sentHtml = sentValues.map((entry, index) => {
+        const sentValue = Number(entry.value) || 0;
+        const dlValue = Number(downloadValues[index] && downloadValues[index].value) || 0;
+        let cssClass = 'delta-cell';
+        if (sentValue > 0 && sentValue < dlValue) {
+          cssClass = 'delta-cell delta-cell-warning';
+        } else if (sentValue > 0) {
+          cssClass = 'delta-cell delta-cell-positive';
+        }
+        if (entry.cycleIndex < 0) {
+          return `<span class="${cssClass}">${sentValue}</span>`;
+        }
+        return `<span class="${cssClass}"><button type="button" class="delta-cell-btn show-cycle-detail-btn" data-kind="sent" data-cycle-index="${entry.cycleIndex}">${sentValue}</button></span>`;
+      }).join('');
+      if (tzero) {
+        return `<div class="delta-group">
+          <div class="delta-row-wrap"><span class="delta-label">DL</span><div class="delta-grid">${downloadHtml}</div></div>
+        </div>`;
+      }
+      return `<div class="delta-group">
+        <div class="delta-row-wrap"><span class="delta-label">DL</span><div class="delta-grid">${downloadHtml}</div></div>
+        <div class="delta-row-wrap"><span class="delta-label">OUT</span><div class="delta-grid">${sentHtml}</div></div>
       </div>`;
     }
 
@@ -1031,14 +1399,49 @@
       return unique.size;
     }
 
+    async function openCycleDetailsModal(row, kind, cycleIndex) {
+      const isSent = kind === 'sent';
+      const details = isSent
+        ? (Array.isArray(row && row.sentCycleDetails) ? row.sentCycleDetails : [])
+        : (Array.isArray(row && row.downloadCycleDetails) ? row.downloadCycleDetails : []);
+      const deltaValues = isSent
+        ? (Array.isArray(row && row.sentDeltas) ? row.sentDeltas : [])
+        : (Array.isArray(row && row.downloadDeltas) ? row.downloadDeltas : []);
+      const cycleLines = Number.isInteger(cycleIndex) && cycleIndex >= 0 && cycleIndex < details.length ? details[cycleIndex] : [];
+      const cycleValue = Number.isInteger(cycleIndex) && cycleIndex >= 0 && cycleIndex < deltaValues.length ? deltaValues[cycleIndex] : 0;
+      cycleDetailsTitle.textContent = `${isSent ? 'Sent' : 'Downloaded'} cycle details`;
+      cycleDetailsSubtitle.textContent = `${extractFileName(row && row.source ? row.source : '')} · cycle ${cycleIndex + 1} · ${cycleValue} rows`;
+      cycleDetailsBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Loading...</td></tr>';
+      cycleDetailsModal.show();
+      const bibChipData = await loadBibChip().catch(() => ({ rows: [] }));
+      const nameMap = buildBibChipNameMap(bibChipData);
+      const rows = Array.isArray(cycleLines) ? cycleLines : [];
+      cycleDetailsBody.innerHTML = '';
+      if (rows.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="3" class="text-center text-muted py-3">No rows in this cycle</td>';
+        cycleDetailsBody.appendChild(tr);
+        return;
+      }
+      rows.forEach((line, index) => {
+        const chip = extractChipFromPassingLine(line);
+        const athlete = chip ? (nameMap.get(chip) || '') : '';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${index + 1}</td><td><code>${escapeHtml(line || '')}</code></td><td>${escapeHtml(athlete)}</td>`;
+        cycleDetailsBody.appendChild(tr);
+      });
+    }
+
     function renderGroups(rows) {
-      currentRows = Array.isArray(rows) ? [...rows] : [];
-      const entries = buildFileEntries(currentRows);
-      groupCountBadge.textContent = `Files: ${entries.length}`;
+      currentRows = applyStoredRowOrder(rows);
+      saveRowOrder(currentRows);
+      const visibleRows = currentRows.filter((row) => isRowVisible(row));
+      const entries = buildFileEntries(visibleRows);
+      groupCountBadge.textContent = `Files: ${entries.length}/${currentRows.length}`;
       tpViewBody.innerHTML = '';
       if (entries.length === 0) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="3" class="text-center text-muted py-4">No file data</td>';
+        tr.innerHTML = '<td colspan="3" class="text-center text-muted py-4">No visible file data</td>';
         tpViewBody.appendChild(tr);
         return;
       }
@@ -1052,40 +1455,118 @@
           <td>${renderTotals(row)}</td>
           <td><div class="minute-chart-wrap" data-chart-key="${escapeHtml(row.rowId)}" data-chart-batch="${escapeHtml(batchSignature)}"><div class="minute-chart-loading">Loading minute chart...</div></div></td>
         `;
-        tr.querySelectorAll('.move-row-btn').forEach((btn) => {
-          btn.addEventListener('click', async () => {
-            const direction = btn.getAttribute('data-direction') || '';
-            try {
-              const rows = await moveRow(tr.dataset.rowId, direction);
-              renderGroups(rows);
-            } catch (error) {
-              appendWsMessage(error.message);
-            }
-          });
-        });
-        const readBtn = tr.querySelector('.show-tp-read-btn');
-        if (readBtn) {
-          readBtn.addEventListener('click', async () => {
-            try {
-              await openFileReadModal(row);
-            } catch (error) {
-              appendWsMessage(error.message);
-            }
-          });
-        }
-        const uniqueBtn = tr.querySelector('.show-tp-unique-btn');
-        if (uniqueBtn) {
-          uniqueBtn.addEventListener('click', async () => {
-            try {
-              await openFileUniqueModal(row);
-            } catch (error) {
-              appendWsMessage(error.message);
-            }
-          });
-        }
+        bindRowInteractions(tr, row, index, entries.length);
         tpViewBody.appendChild(tr);
       });
       rebuildMinuteCharts(entries);
+    }
+
+    function bindRowInteractions(tr, row, index, totalRows) {
+      if (!tr || !row) {
+        return;
+      }
+      tr.querySelectorAll('.move-row-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const direction = btn.getAttribute('data-direction') || '';
+          try {
+            const rows = await moveRow(tr.dataset.rowId, direction);
+            updateStoredRowOrderForMove(tr.dataset.rowId, direction);
+            renderGroups(rows);
+          } catch (error) {
+            appendWsMessage(error.message);
+          }
+        });
+      });
+      const readBtn = tr.querySelector('.show-tp-read-btn');
+      if (readBtn) {
+        readBtn.addEventListener('click', async () => {
+          try {
+            await openFileReadModal(row);
+          } catch (error) {
+            appendWsMessage(error.message);
+          }
+        });
+      }
+      const uniqueBtn = tr.querySelector('.show-tp-unique-btn');
+      if (uniqueBtn) {
+        uniqueBtn.addEventListener('click', async () => {
+          try {
+            await openFileUniqueModal(row);
+          } catch (error) {
+            appendWsMessage(error.message);
+          }
+        });
+      }
+      tr.querySelectorAll('.show-cycle-detail-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const kind = btn.getAttribute('data-kind') || 'download';
+          const cycleIndex = Number.parseInt(btn.getAttribute('data-cycle-index') || '', 10);
+          try {
+            await openCycleDetailsModal(row, kind, cycleIndex);
+          } catch (error) {
+            appendWsMessage(error.message);
+          }
+        });
+      });
+    }
+
+    function patchVisibleRow(updatedRow) {
+      const visibleRows = currentRows.filter((row) => isRowVisible(row));
+      const entries = buildFileEntries(visibleRows);
+      const index = entries.findIndex((entry) => entry.row && entry.row.rowId === updatedRow.rowId);
+      if (index < 0) {
+        renderGroups(currentRows);
+        return;
+      }
+      const tr = tpViewBody.querySelector(`tr[data-row-id="${CSS.escape(updatedRow.rowId)}"]`);
+      if (!tr || tr.children.length < 3) {
+        renderGroups(currentRows);
+        return;
+      }
+      tr.children[0].innerHTML = renderFileCell(updatedRow, index, entries.length);
+      tr.children[1].innerHTML = renderTotals(updatedRow);
+      bindRowInteractions(tr, updatedRow, index, entries.length);
+    }
+
+    function renderFileVisibilityList() {
+      fileVisibilityList.innerHTML = '';
+      if (!currentRows.length) {
+        fileVisibilityList.innerHTML = '<div class="text-muted text-center py-3">No files available</div>';
+        return;
+      }
+      currentRows.forEach((row) => {
+        const rowId = row && row.rowId ? String(row.rowId) : '';
+        const source = row && row.source ? row.source : '';
+        const fileName = extractFileName(source) || source || '(No file)';
+        const timingPoint = row && row.timingPoint ? row.timingPoint : '(No timing point)';
+        const wrapper = document.createElement('label');
+        wrapper.className = 'file-visibility-item';
+        wrapper.innerHTML = `
+          <div class="min-w-0">
+            <div class="file-visibility-name">${escapeHtml(fileName)}</div>
+            <div class="file-visibility-meta">${escapeHtml(timingPoint)}</div>
+          </div>
+          <div class="form-check form-switch m-0">
+            <input class="form-check-input file-visibility-switch" type="checkbox" ${hiddenRowIds.has(rowId) ? '' : 'checked'}>
+          </div>
+        `;
+        const toggle = wrapper.querySelector('.file-visibility-switch');
+        toggle.addEventListener('change', () => {
+          if (toggle.checked) {
+            hiddenRowIds.delete(rowId);
+          } else {
+            hiddenRowIds.add(rowId);
+          }
+          saveHiddenFiles();
+          renderGroups(currentRows);
+        });
+        fileVisibilityList.appendChild(wrapper);
+      });
+    }
+
+    function openFileVisibilityModal() {
+      renderFileVisibilityList();
+      fileVisibilityModal.show();
     }
 
     async function openFileReadModal(row) {
@@ -1227,13 +1708,14 @@
       } else {
         currentRows.push(updatedRow);
       }
-      renderGroups(currentRows);
+      patchVisibleRow(updatedRow);
     }
 
     function applyStartTimeSelection() {
       const raw = (startTimeInput.value || '').trim();
       if (!raw) {
         chartStartTimeSeconds = null;
+        saveStartTimeSelection('');
         renderGroups(currentRows);
         return;
       }
@@ -1244,6 +1726,7 @@
       }
       chartStartTimeSeconds = parsed;
       startTimeInput.value = raw;
+      saveStartTimeSelection(raw);
       renderGroups(currentRows);
       appendWsMessage(`Chart start time set to ${raw}`);
     }
@@ -1251,6 +1734,7 @@
     function resetStartTimeSelection() {
       chartStartTimeSeconds = null;
       startTimeInput.value = '';
+      saveStartTimeSelection('');
       renderGroups(currentRows);
       appendWsMessage('Chart start time reset');
     }
@@ -1350,6 +1834,24 @@
       }
     });
 
+    filterFilesBtn.addEventListener('click', () => {
+      openFileVisibilityModal();
+    });
+
+    showAllFilesBtn.addEventListener('click', () => {
+      hiddenRowIds = new Set();
+      saveHiddenFiles();
+      renderFileVisibilityList();
+      renderGroups(currentRows);
+    });
+
+    hideAllFilesBtn.addEventListener('click', () => {
+      hiddenRowIds = new Set(currentRows.map((row) => String(row && row.rowId ? row.rowId : '')).filter((value) => value));
+      saveHiddenFiles();
+      renderFileVisibilityList();
+      renderGroups(currentRows);
+    });
+
     startTimeInput.addEventListener('change', () => {
       applyStartTimeSelection();
     });
@@ -1358,6 +1860,10 @@
       if (event.key === 'Enter') {
         applyStartTimeSelection();
       }
+    });
+
+    applyStartTimeBtn.addEventListener('click', () => {
+      applyStartTimeSelection();
     });
 
     resetStartTimeBtn.addEventListener('click', () => {
@@ -1382,6 +1888,9 @@
       if (!requireLogin()) {
         return;
       }
+      applyModeVisibility();
+      loadHiddenFiles();
+      restoreStartTimeSelection();
       setMessagesCollapsed(localStorage.getItem('rr.tpview.messagesCollapsed') === '1');
       startKeepAlive();
       loadEventMeta();
