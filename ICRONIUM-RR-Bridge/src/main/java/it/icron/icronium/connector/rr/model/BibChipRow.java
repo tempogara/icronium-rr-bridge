@@ -6,6 +6,7 @@ public class BibChipRow {
     private int bib;
     private String lastName;
     private String firstName;
+    private String team;
 
     public BibChipRow() {
     }
@@ -20,6 +21,14 @@ public class BibChipRow {
         this.bib = bib;
         this.lastName = lastName;
         this.firstName = firstName;
+    }
+
+    public BibChipRow(String chip, int bib, String lastName, String firstName, String team) {
+        this.chip = chip;
+        this.bib = bib;
+        this.lastName = lastName;
+        this.firstName = firstName;
+        this.team = team;
     }
 
     public String getChip() {
@@ -52,5 +61,13 @@ public class BibChipRow {
 
     public void setFirstName(String firstName) {
         this.firstName = firstName;
+    }
+
+    public String getTeam() {
+        return team;
+    }
+
+    public void setTeam(String team) {
+        this.team = team;
     }
 }

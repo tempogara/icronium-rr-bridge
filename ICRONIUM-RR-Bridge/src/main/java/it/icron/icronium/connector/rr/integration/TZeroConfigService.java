@@ -3,6 +3,7 @@ package it.icron.icronium.connector.rr.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.icron.icronium.connector.rr.model.Gara;
+import it.icron.icronium.connector.rr.model.TZeroTimingPoint;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -13,9 +14,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 
 @Service
 public class TZeroConfigService {
@@ -101,5 +103,157 @@ public class TZeroConfigService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cartella gara TZero non trovata");
         }
         return eventFolder;
+    }
+
+    public synchronized List<TZeroTimingPoint> loadTimingPoints(String rootFolder, String eventId) {
+        Path configPath = getTimingPointsConfigPath(rootFolder, eventId);
+        if (!Files.exists(configPath)) {
+            return new ArrayList<>();
+        }
+        try {
+            JsonNode root = objectMapper.readTree(configPath.toFile());
+            JsonNode timingPointsNode = root == null ? null : root.get("timingPoints");
+            List<TZeroTimingPoint> result = new ArrayList<>();
+            if (timingPointsNode != null && timingPointsNode.isArray()) {
+                for (JsonNode node : timingPointsNode) {
+                    String name = textValue(node.get("name"));
+                    if (name.isBlank()) {
+                        continue;
+                    }
+                    String description = textValue(node.get("description"));
+                    List<String> sources = new ArrayList<>();
+                    JsonNode sourcesNode = node.get("sources");
+                    if (sourcesNode != null && sourcesNode.isArray()) {
+                        for (JsonNode sourceNode : sourcesNode) {
+                            String source = sourceNode == null ? "" : sourceNode.asText("");
+                            if (source != null && !source.isBlank()) {
+                                sources.add(source.trim());
+                            }
+                        }
+                    }
+                    result.add(new TZeroTimingPoint(name.trim(), description.trim(), sources));
+                }
+            }
+            result.sort(Comparator.comparing(tp -> tp.getName().toLowerCase()));
+            return result;
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Impossibile leggere timingpoints.json");
+        }
+    }
+
+    public synchronized List<TZeroTimingPoint> createOrUpdateTimingPoint(String rootFolder, String eventId, String name, String description) {
+        String normalizedName = normalizeTimingPointName(name);
+        List<TZeroTimingPoint> timingPoints = loadTimingPoints(rootFolder, eventId);
+        TZeroTimingPoint existing = timingPoints.stream()
+                .filter(tp -> normalizedName.equalsIgnoreCase(tp.getName()))
+                .findFirst()
+                .orElse(null);
+        if (existing == null) {
+            timingPoints.add(new TZeroTimingPoint(normalizedName, normalizeDescription(description), new ArrayList<>()));
+        } else {
+            existing.setDescription(normalizeDescription(description));
+        }
+        saveTimingPoints(rootFolder, eventId, timingPoints);
+        return loadTimingPoints(rootFolder, eventId);
+    }
+
+    public synchronized List<TZeroTimingPoint> deleteTimingPoint(String rootFolder, String eventId, String name) {
+        String normalizedName = normalizeTimingPointName(name);
+        List<TZeroTimingPoint> timingPoints = loadTimingPoints(rootFolder, eventId);
+        boolean removed = timingPoints.removeIf(tp -> normalizedName.equalsIgnoreCase(tp.getName()));
+        if (!removed) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Timing point TZero non trovato");
+        }
+        saveTimingPoints(rootFolder, eventId, timingPoints);
+        return loadTimingPoints(rootFolder, eventId);
+    }
+
+    public synchronized List<TZeroTimingPoint> assignSourceToTimingPoint(String rootFolder, String eventId, String sourceFileName, String timingPointName) {
+        String normalizedSource = normalizeSourceFileName(sourceFileName);
+        if (normalizedSource.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Source file obbligatorio");
+        }
+        List<TZeroTimingPoint> timingPoints = loadTimingPoints(rootFolder, eventId);
+        timingPoints.forEach(tp -> tp.getSources().removeIf(source -> normalizedSource.equalsIgnoreCase(normalizeSourceFileName(source))));
+
+        String normalizedTimingPoint = timingPointName == null ? "" : timingPointName.trim();
+        if (!normalizedTimingPoint.isBlank()) {
+            TZeroTimingPoint target = timingPoints.stream()
+                    .filter(tp -> normalizedTimingPoint.equalsIgnoreCase(tp.getName()))
+                    .findFirst()
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Timing point TZero non definito"));
+            if (target.getSources().stream().noneMatch(source -> normalizedSource.equalsIgnoreCase(normalizeSourceFileName(source)))) {
+                target.getSources().add(normalizedSource);
+            }
+        }
+        saveTimingPoints(rootFolder, eventId, timingPoints);
+        return loadTimingPoints(rootFolder, eventId);
+    }
+
+    public synchronized Map<String, String> buildTimingPointBySourceMap(String rootFolder, String eventId) {
+        Map<String, String> result = new LinkedHashMap<>();
+        for (TZeroTimingPoint timingPoint : loadTimingPoints(rootFolder, eventId)) {
+            for (String source : timingPoint.getSources()) {
+                String normalizedSource = normalizeSourceFileName(source);
+                if (!normalizedSource.isBlank()) {
+                    result.put(normalizedSource.toLowerCase(), timingPoint.getName());
+                }
+            }
+        }
+        return result;
+    }
+
+    private void saveTimingPoints(String rootFolder, String eventId, List<TZeroTimingPoint> timingPoints) {
+        Path configPath = getTimingPointsConfigPath(rootFolder, eventId);
+        try {
+            Files.createDirectories(configPath.getParent());
+            List<Map<String, Object>> serialized = timingPoints.stream()
+                    .filter(Objects::nonNull)
+                    .map(tp -> Map.<String, Object>of(
+                            "name", tp.getName() == null ? "" : tp.getName().trim(),
+                            "description", tp.getDescription() == null ? "" : tp.getDescription().trim(),
+                            "sources", tp.getSources() == null ? List.of() : tp.getSources().stream()
+                                    .map(this::normalizeSourceFileName)
+                                    .filter(source -> !source.isBlank())
+                                    .distinct()
+                                    .toList()
+                    ))
+                    .toList();
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(configPath.toFile(), Map.of("timingPoints", serialized));
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Impossibile salvare timingpoints.json");
+        }
+    }
+
+    private Path getTimingPointsConfigPath(String rootFolder, String eventId) {
+        Path eventFolder = getEventFolder(rootFolder, eventId);
+        return eventFolder.resolve("config").resolve("timingpoints.json").normalize();
+    }
+
+    private String normalizeTimingPointName(String value) {
+        if (value == null || value.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome timing point obbligatorio");
+        }
+        return value.trim();
+    }
+
+    private String normalizeDescription(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String normalizeSourceFileName(String value) {
+        if (value == null) {
+            return "";
+        }
+        String normalized = value.trim().replace('\\', '/');
+        int slash = normalized.lastIndexOf('/');
+        if (slash >= 0 && slash + 1 < normalized.length()) {
+            normalized = normalized.substring(slash + 1);
+        }
+        return normalized.trim();
+    }
+
+    private String textValue(JsonNode node) {
+        return node == null || node.isNull() ? "" : node.asText("");
     }
 }

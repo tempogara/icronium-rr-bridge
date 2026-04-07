@@ -389,6 +389,7 @@
         </button>
         <button id="btnRrLive" class="btn btn-sm btn-outline-secondary" type="button">RR Live</button>
         <button id="btnTpView" class="btn btn-sm btn-outline-secondary" type="button">TP View</button>
+        <button id="btnReaderView" class="btn btn-sm btn-outline-secondary" type="button">Reader View</button>
         <button id="btnDetailView" class="btn btn-sm btn-outline-secondary" type="button">Race Detail</button>
         <button id="backToMenuBtn" class="btn btn-sm btn-outline-primary" type="button">Dashboard</button>
       </div>
@@ -589,6 +590,7 @@
     const btnRrLive = document.getElementById('btnRrLive');
     const btnDetailView = document.getElementById('btnDetailView');
     const btnTpView = document.getElementById('btnTpView');
+    const btnReaderView = document.getElementById('btnReaderView');
     const backToMenuBtn = document.getElementById('backToMenuBtn');
     const syncBtn = document.getElementById('syncBtn');
     const refreshBtn = document.getElementById('refreshBtn');
@@ -1799,6 +1801,13 @@
       window.location.href = eventId
         ? `/timingpointView.html?eventId=${encodeURIComponent(eventId)}`
         : '/timingpointView.html';
+    });
+
+    btnReaderView.addEventListener('click', () => {
+      const eventId = getEventId();
+      window.location.href = eventId
+        ? `/readerView.html?eventId=${encodeURIComponent(eventId)}`
+        : '/readerView.html';
     });
 
     btnOpenRr.addEventListener('click', async () => {

@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reader View</title>
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-icronium.svg">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { padding-bottom: 240px; background: #f6f7f9; }
+    body.messages-collapsed { padding-bottom: 56px; }
+    .toolbar-box { background: #ececee; border: 1px solid #d2d2d2; border-radius: 8px; padding: 10px; }
+    .toolbar-row { border-bottom: 1px solid #d4d4d4; padding-bottom: 10px; margin-bottom: 10px; }
+    .rrid-label { display: inline-block; background: #0d6efd; color: #fff; border-radius: 6px; padding: 6px 10px; font-weight: 600; min-width: 180px; }
+    .btn-bordeaux { background-color: #d20610; border-color: #b7050e; color: #fff; }
+    .btn-bordeaux:hover { background-color: #b7050e; border-color: #99040c; color: #fff; }
+    .messages-panel { height: 220px; border-top: 1px solid #dee2e6; transition: transform 0.2s ease; }
+    .messages-panel.is-collapsed { transform: translateY(calc(100% - 46px)); }
+    .messages-log { height: 130px; overflow-y: auto; background: #f8f9fa; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.85rem; }
+    .messages-toggle { min-width: 38px; font-weight: 700; line-height: 1; }
+    .reader-card-col { display: flex; }
+    .reader-card { width: 100%; border: 1px solid #d9e1ea; border-radius: 16px; background: #fff; color: #111827; box-shadow: 0 10px 28px rgba(15,23,42,.08); overflow: hidden; }
+    .reader-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 1rem; border-bottom: 1px solid #edf2f7; background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%); }
+    .reader-card-title { font-size: 1.08rem; font-weight: 800; color: #111827; line-height: 1.2; }
+    .reader-card-subtitle { margin-top: .28rem; font-size: .82rem; color: #64748b; }
+    .reader-move-controls { display: flex; gap: 4px; flex: 0 0 auto; }
+    .reader-move-btn { min-width: 28px; padding: .1rem .35rem; font-size: .78rem; line-height: 1.1; }
+    .reader-card-body { display: flex; flex-direction: column; gap: 14px; padding: 1rem; color: #111827; }
+    .reader-meta-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .reader-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 84px; padding: 4px 10px; border-radius: 999px; font-size: .73rem; font-weight: 700; letter-spacing: .03em; }
+    .reader-location { background: #e0f2fe; color: #075985; }
+    .reader-type { background: #ede9fe; color: #5b21b6; }
+    .reader-status-ok { background: #dcfce7; color: #166534; }
+    .reader-status-warn { background: #fef3c7; color: #92400e; }
+    .reader-status-error { background: #fee2e2; color: #991b1b; }
+    .reader-files { height: 198px; overflow-y: auto; padding: 12px; border: 1px solid #1b2838; border-radius: 10px; background: linear-gradient(180deg, #0d1117 0%, #111827 100%); box-shadow: inset 0 0 0 1px rgba(56, 189, 248, .08); }
+    .reader-files-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #94a3b8; font-size: .92rem; text-align: center; }
+    .reader-file-row { display: grid; grid-template-columns: minmax(0,1fr) 76px 76px; gap: 8px; align-items: center; padding: .34rem 0; border-bottom: 1px solid rgba(148,163,184,.16); }
+    .reader-file-row:last-child { border-bottom: 0; }
+    .reader-file-name { color: #f8fafc; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .reader-file-ts { color: #f8fafc; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: .74rem; }
+    .reader-card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .reader-last-scan { color: #64748b; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .reader-file-link { padding: 0; border: 0; background: transparent; color: #f8fafc; font-weight: 700; text-align: left; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .reader-file-link:hover { color: #93c5fd; }
+    .reader-file-link.is-linked { color: #86efac; }
+    .reader-file-link.is-linked::before { content: "L "; color: #22c55e; font-weight: 800; }
+    .file-content-path { font-size: .82rem; color: #64748b; word-break: break-all; }
+    .file-content-box { height: 420px; overflow: auto; border: 1px solid #d7dce2; border-radius: 10px; background: #0f172a; color: #f8fafc; padding: .75rem; }
+    .file-content-line { white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: .84rem; padding: .12rem 0; border-bottom: 1px solid rgba(148,163,184,.12); }
+    .file-content-line:last-child { border-bottom: 0; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg bg-white border-bottom mb-3">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0">
+        <img src="/images/icronium.png" alt="Icronium" style="max-height: 42px;">
+      </span>
+      <div class="d-flex align-items-center gap-2">
+        <button id="btnOpenRr" class="btn btn-sm btn-bordeaux d-inline-flex align-items-center gap-2" type="button">
+          <img src="/images/open-rr.png" alt="" style="width:18px;height:18px;border-radius:3px;">
+          <span>Open RR</span>
+        </button>
+        <button id="btnRrLive" class="btn btn-sm btn-outline-secondary" type="button">RR Live</button>
+        <button id="btnTpView" class="btn btn-sm btn-outline-secondary" type="button">TP View</button>
+        <button id="btnFileView" class="btn btn-sm btn-outline-secondary" type="button">File View</button>
+        <button id="btnDetailView" class="btn btn-sm btn-outline-secondary" type="button">Race Detail</button>
+        <button id="backToMenuBtn" class="btn btn-sm btn-outline-primary" type="button">Dashboard</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container-fluid py-3">
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-8"><div id="eventNameText" class="fw-bold fs-5"></div></div>
+      <div class="col-12 col-md-4"><div id="eventDateText" class="fw-bold fs-5"></div></div>
+    </div>
+
+    <div class="toolbar-box mb-3">
+      <div class="d-flex flex-wrap align-items-center gap-2 toolbar-row">
+        <span class="mb-0 fw-semibold">RR ID:</span>
+        <span id="rrIdLabel" class="rrid-label"></span>
+        <button id="scanBtn" class="btn btn-outline-secondary">Scan</button>
+        <button id="refreshBtn" class="btn btn-outline-secondary">Refresh</button>
+        <button id="addReaderBtn" class="btn btn-outline-secondary">Add reader</button>
+        <span id="readerCountBadge" class="badge text-bg-secondary ms-auto">Readers: 0</span>
+      </div>
+    </div>
+
+    <div id="readerCards" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3"></div>
+  </main>
+
+  <section id="messagesPanel" class="messages-panel card border-0 shadow-sm position-fixed bottom-0 start-0 end-0 m-3">
+    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">Messages</span>
+      <div class="d-flex align-items-center gap-2">
+        <span id="wsStatus" class="badge text-bg-secondary">Offline</span>
+        <button id="messagesToggleBtn" class="btn btn-sm btn-outline-secondary messages-toggle" type="button">▼</button>
+      </div>
+    </div>
+    <div id="messagesLog" class="messages-log card-body"></div>
+  </section>
+
+  <div class="modal fade" id="readerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 id="readerModalTitle" class="modal-title">Add reader</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+        <div class="mb-3">
+          <label for="readerNameInput" class="form-label">Name or IP</label>
+          <input id="readerNameInput" class="form-control" type="text" placeholder="192.168.1.100 or /folder/path">
+        </div>
+          <div class="mb-3">
+            <label for="readerLocationSelect" class="form-label">Location</label>
+            <select id="readerLocationSelect" class="form-select">
+              <option value="LAN">LAN</option>
+              <option value="WAN">WAN</option>
+              <option value="FS">FS</option>
+            </select>
+          </div>
+          <div class="mb-0">
+            <label for="readerTypeSelect" class="form-label">Type</label>
+            <select id="readerTypeSelect" class="form-select">
+              <option value="ICRON">ICRON</option>
+              <option value="UBIDIUM">UBIDIUM</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button id="saveReaderBtn" type="button" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="fileContentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 id="fileContentTitle" class="modal-title">File content</h5>
+            <div id="fileContentPath" class="file-content-path"></div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <input id="fileContentSearchInput" class="form-control" type="text" placeholder="Search in file content">
+          </div>
+          <div id="fileContentBox" class="file-content-box"></div>
+        </div>
+        <div class="modal-footer">
+          <div class="d-flex flex-wrap align-items-center gap-2 w-100">
+            <button id="openAddReaderFileModalBtn" type="button" class="btn btn-sm btn-primary ms-auto">Add to race</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="addReaderFileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add passings file</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="readerFileSourceInput" class="form-label">Selected file</label>
+            <input id="readerFileSourceInput" class="form-control" type="text" readonly>
+          </div>
+          <div class="mb-2">
+            <label for="readerFileTpSelect" class="form-label">Timing point</label>
+            <select id="readerFileTpSelect" class="form-select"></select>
+          </div>
+          <div class="mb-2">
+            <label for="readerFileSyncInput" class="form-label">Sync offset (+/- hh:mm:ss.sss)</label>
+            <input id="readerFileSyncInput" class="form-control" type="text" value="+00:00:00.000" placeholder="+00:00:00.000">
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label for="readerFileFromInput" class="form-label">From time</label>
+              <input id="readerFileFromInput" class="form-control" type="text" placeholder="00:00:00">
+            </div>
+            <div class="col-6">
+              <label for="readerFileToInput" class="form-label">To time</label>
+              <input id="readerFileToInput" class="form-control" type="text" placeholder="23:59:00">
+            </div>
+          </div>
+          <div class="mb-0">
+            <label for="readerFileEveryInput" class="form-label">Download every (seconds)</label>
+            <input id="readerFileEveryInput" class="form-control" type="number" min="1" value="10">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button id="saveReaderFileToRaceBtn" type="button" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const STORAGE_KEYS = { auth: 'rr.auth', selectedGara: 'rr.selectedGara', messagesCollapsed: 'rr.readerView.messagesCollapsed' };
+    const rrIdLabel = document.getElementById('rrIdLabel');
+    const eventNameText = document.getElementById('eventNameText');
+    const eventDateText = document.getElementById('eventDateText');
+    const btnOpenRr = document.getElementById('btnOpenRr');
+    const btnRrLive = document.getElementById('btnRrLive');
+    const btnTpView = document.getElementById('btnTpView');
+    const btnFileView = document.getElementById('btnFileView');
+    const btnDetailView = document.getElementById('btnDetailView');
+    const backToMenuBtn = document.getElementById('backToMenuBtn');
+    const scanBtn = document.getElementById('scanBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const addReaderBtn = document.getElementById('addReaderBtn');
+    const readerCountBadge = document.getElementById('readerCountBadge');
+    const readerCards = document.getElementById('readerCards');
+    const messagesPanel = document.getElementById('messagesPanel');
+    const messagesLog = document.getElementById('messagesLog');
+    const messagesToggleBtn = document.getElementById('messagesToggleBtn');
+    const wsStatus = document.getElementById('wsStatus');
+    const readerModalTitle = document.getElementById('readerModalTitle');
+    const readerNameInput = document.getElementById('readerNameInput');
+    const readerLocationSelect = document.getElementById('readerLocationSelect');
+    const readerTypeSelect = document.getElementById('readerTypeSelect');
+    const saveReaderBtn = document.getElementById('saveReaderBtn');
+    const fileContentTitle = document.getElementById('fileContentTitle');
+    const fileContentPath = document.getElementById('fileContentPath');
+    const fileContentSearchInput = document.getElementById('fileContentSearchInput');
+    const fileContentBox = document.getElementById('fileContentBox');
+    const openAddReaderFileModalBtn = document.getElementById('openAddReaderFileModalBtn');
+    const readerFileSourceInput = document.getElementById('readerFileSourceInput');
+    const readerFileTpSelect = document.getElementById('readerFileTpSelect');
+    const readerFileSyncInput = document.getElementById('readerFileSyncInput');
+    const readerFileFromInput = document.getElementById('readerFileFromInput');
+    const readerFileToInput = document.getElementById('readerFileToInput');
+    const readerFileEveryInput = document.getElementById('readerFileEveryInput');
+    const saveReaderFileToRaceBtn = document.getElementById('saveReaderFileToRaceBtn');
+    const readerModal = new bootstrap.Modal(document.getElementById('readerModal'));
+    const fileContentModal = new bootstrap.Modal(document.getElementById('fileContentModal'));
+    const addReaderFileModal = new bootstrap.Modal(document.getElementById('addReaderFileModal'));
+
+    let currentState = { readers: [] };
+    let editingReaderId = null;
+    let keepAliveTimerId = null;
+    let currentFileContentLines = [];
+    let currentFileContext = null;
+
+    function getEventId() {
+      return new URLSearchParams(window.location.search).get('eventId') || '';
+    }
+
+    function requireLogin() {
+      if (!localStorage.getItem(STORAGE_KEYS.auth)) {
+        window.location.href = '/index.html';
+        return false;
+      }
+      return true;
+    }
+
+    function getStoredAuth() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.auth) || 'null'); } catch (_error) { return null; }
+    }
+
+    function applyModeVisibility() {
+      const auth = getStoredAuth();
+      btnOpenRr.classList.toggle('d-none', !auth || auth.mode === 'TZERO');
+    }
+
+    function redirectToLogin() {
+      localStorage.removeItem(STORAGE_KEYS.auth);
+      window.location.href = '/index.html';
+    }
+
+    async function fetchJson(url, options) {
+      const response = await fetch(url, options);
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error(`Error loading ${url}`);
+      }
+      return response.json();
+    }
+
+    async function fetchText(url, options) {
+      const response = await fetch(url, options);
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error(`Error loading ${url}`);
+      }
+      return response.text();
+    }
+
+    async function keepSessionAlive(silent) {
+      const response = await fetch('/api/auth/keepalive');
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Keepalive failed');
+      }
+      if (!silent) {
+        appendMessage('Session keepalive OK');
+      }
+    }
+
+    function startKeepAlive() {
+      if (keepAliveTimerId) {
+        clearInterval(keepAliveTimerId);
+      }
+      keepAliveTimerId = setInterval(() => keepSessionAlive(true).catch((error) => appendMessage(error.message)), 5 * 60 * 1000);
+    }
+
+    function loadEventMeta() {
+      const eventId = getEventId();
+      rrIdLabel.textContent = eventId;
+      const raw = sessionStorage.getItem(STORAGE_KEYS.selectedGara);
+      if (!raw) {
+        eventNameText.textContent = '';
+        eventDateText.textContent = '';
+        return;
+      }
+      try {
+        const data = JSON.parse(raw);
+        if (data && data.id === eventId) {
+          eventNameText.textContent = data.eventName || '';
+          eventDateText.textContent = data.eventDate || '';
+          return;
+        }
+      } catch (_error) {}
+      eventNameText.textContent = '';
+      eventDateText.textContent = '';
+    }
+
+    function appendMessage(text) {
+      const row = document.createElement('div');
+      row.textContent = `${new Date().toLocaleTimeString('it-IT')} - ${text}`;
+      messagesLog.appendChild(row);
+      messagesLog.scrollTop = messagesLog.scrollHeight;
+    }
+
+    function setMessagesCollapsed(collapsed) {
+      messagesPanel.classList.toggle('is-collapsed', collapsed);
+      document.body.classList.toggle('messages-collapsed', collapsed);
+      messagesToggleBtn.textContent = collapsed ? '▲' : '▼';
+      localStorage.setItem(STORAGE_KEYS.messagesCollapsed, collapsed ? '1' : '0');
+    }
+
+    function restoreMessagesCollapsed() {
+      setMessagesCollapsed(localStorage.getItem(STORAGE_KEYS.messagesCollapsed) === '1');
+    }
+
+    function loadRows() {
+      const eventId = getEventId();
+      return fetchJson(`/api/readers/${encodeURIComponent(eventId)}`);
+    }
+
+    function scanReaders() {
+      const eventId = getEventId();
+      return fetchJson(`/api/readers/${encodeURIComponent(eventId)}/scan`, { method: 'POST' });
+    }
+
+    function saveReader() {
+      const eventId = getEventId();
+      const body = JSON.stringify({
+        name: readerNameInput.value.trim(),
+        location: readerLocationSelect.value,
+        tipologia: readerTypeSelect.value
+      });
+      const url = editingReaderId
+        ? `/api/readers/${encodeURIComponent(eventId)}/${encodeURIComponent(editingReaderId)}`
+        : `/api/readers/${encodeURIComponent(eventId)}`;
+      const method = editingReaderId ? 'PUT' : 'POST';
+      return fetchJson(url, { method, headers: { 'Content-Type': 'application/json' }, body });
+    }
+
+    function deleteReader(readerId) {
+      return fetchJson(`/api/readers/${encodeURIComponent(getEventId())}/${encodeURIComponent(readerId)}`, { method: 'DELETE' });
+    }
+
+    function moveReader(readerId, direction) {
+      return fetchJson(`/api/readers/${encodeURIComponent(getEventId())}/${encodeURIComponent(readerId)}/move/${encodeURIComponent(direction)}`, { method: 'POST' });
+    }
+
+    function loadFileContent(readerId, path) {
+      return fetchJson(`/api/readers/${encodeURIComponent(getEventId())}/${encodeURIComponent(readerId)}/content?path=${encodeURIComponent(path)}`);
+    }
+
+    function materializeReaderFile(readerId, filePath) {
+      return fetchText(`/api/readers/${encodeURIComponent(getEventId())}/add-to-race`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ readerId, filePath })
+      });
+    }
+
+    function addFilePassaggiToRace(source) {
+      return fetchJson(`/api/gare/${encodeURIComponent(getEventId())}/file-passaggi`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source,
+          timingPoint: readerFileTpSelect.value.trim(),
+          scaricaOgniSec: Number(readerFileEveryInput.value || 10),
+          syncOffset: readerFileSyncInput.value.trim(),
+          filterFromTime: readerFileFromInput.value.trim(),
+          filterToTime: readerFileToInput.value.trim()
+        })
+      });
+    }
+
+    async function loadTimingPointsForAdd() {
+      const auth = getStoredAuth();
+      const response = await fetchJson(`/api/gare/${encodeURIComponent(getEventId())}/timing-points`);
+      const points = Array.isArray(response.timingPoints) ? response.timingPoints : [];
+      readerFileTpSelect.innerHTML = '';
+      if (auth && auth.mode === 'TZERO') {
+        readerFileTpSelect.innerHTML += '<option value="">(Optional)</option>';
+      }
+      points.forEach((tp) => {
+        const option = document.createElement('option');
+        option.value = tp;
+        option.textContent = tp;
+        readerFileTpSelect.appendChild(option);
+      });
+    }
+
+    function statusClass(status) {
+      const value = String(status || '').toUpperCase();
+      if (value === 'OK') return 'reader-status-ok';
+      if (value === 'ERROR') return 'reader-status-error';
+      return 'reader-status-warn';
+    }
+
+    function formatFileTime(value) {
+      const text = String(value || '').trim();
+      if (!text) {
+        return '';
+      }
+      const match = text.match(/(\d{2}:\d{2}:\d{2})$/);
+      return match ? match[1] : text;
+    }
+
+    function formatFileSize(bytes) {
+      const value = Number(bytes || 0);
+      if (!Number.isFinite(value) || value <= 0) {
+        return '0 B';
+      }
+      const units = ['B', 'KB', 'MB', 'GB'];
+      let current = value;
+      let unitIndex = 0;
+      while (current >= 1024 && unitIndex < units.length - 1) {
+        current /= 1024;
+        unitIndex += 1;
+      }
+      const decimals = current >= 10 || unitIndex === 0 ? 0 : 1;
+      return `${current.toFixed(decimals)} ${units[unitIndex]}`;
+    }
+
+    function renderFileContentLines() {
+      const filter = fileContentSearchInput.value.trim().toLowerCase();
+      const filtered = currentFileContentLines.filter((line) => !filter || line.toLowerCase().includes(filter));
+      if (!filtered.length) {
+        fileContentBox.innerHTML = '<div class="text-center text-secondary py-4">No matching lines</div>';
+        return;
+      }
+      fileContentBox.innerHTML = filtered.map((line) => `<div class="file-content-line">${escapeHtml(line)}</div>`).join('');
+    }
+
+    async function openFileContent(reader, file) {
+      try {
+        const data = await loadFileContent(reader.readerId, file.path || '');
+        currentFileContentLines = String(data.content || '').split(/\r?\n/);
+        currentFileContext = { readerId: reader.readerId, filePath: file.path || '', fileName: file.name || '' };
+        fileContentTitle.textContent = data.fileName || 'File content';
+        fileContentPath.textContent = data.filePath || '';
+        fileContentSearchInput.value = '';
+        renderFileContentLines();
+        fileContentModal.show();
+      } catch (error) {
+        appendMessage(error.message);
+      }
+    }
+
+    function renderCards(state) {
+      currentState = state || { readers: [] };
+      const readers = Array.isArray(currentState.readers) ? currentState.readers : [];
+      readerCountBadge.textContent = `Readers: ${readers.length}`;
+      readerCards.innerHTML = '';
+      if (!readers.length) {
+        readerCards.innerHTML = '<div class="col-12"><div class="card border-0 shadow-sm"><div class="card-body text-center text-muted py-4">No readers configured</div></div></div>';
+        return;
+      }
+      readers.forEach((reader, index) => {
+        const files = Array.isArray(reader.todayFiles) ? reader.todayFiles : [];
+        const fileHtml = files.length
+          ? files.map((file) => `
+              <div class="reader-file-row">
+                <button type="button" class="reader-file-link ${file.linkedToRace ? 'is-linked' : ''}" title="${escapeHtml(file.path || file.name || '')}" data-file-path="${escapeHtml(file.path || '')}">${escapeHtml(file.name || '')}</button>
+                <div class="reader-file-ts">${escapeHtml(formatFileSize(file.sizeBytes || 0))}</div>
+                <div class="reader-file-ts">${escapeHtml(formatFileTime(file.modifiedAt || ''))}</div>
+              </div>
+            `).join('')
+          : '<div class="reader-files-empty">No files for today</div>';
+        const card = document.createElement('div');
+        card.className = 'col reader-card-col';
+        card.innerHTML = `
+          <article class="reader-card">
+            <div class="reader-card-header">
+              <div>
+                <div class="reader-card-title">${escapeHtml(reader.name || '')}</div>
+                <div class="reader-card-subtitle">${escapeHtml(reader.lastScanMessage || '')}</div>
+              </div>
+              <div class="reader-move-controls">
+                <button class="btn btn-sm btn-outline-secondary reader-move-btn move-reader-btn" data-direction="up" ${index === 0 ? 'disabled' : ''}>↑</button>
+                <button class="btn btn-sm btn-outline-secondary reader-move-btn move-reader-btn" data-direction="down" ${index === readers.length - 1 ? 'disabled' : ''}>↓</button>
+              </div>
+            </div>
+            <div class="reader-card-body">
+              <div class="reader-meta-row">
+                <span class="reader-badge reader-location">${escapeHtml(reader.location || '')}</span>
+                <span class="reader-badge reader-type">${escapeHtml(reader.tipologia || '')}</span>
+                <span class="reader-badge ${statusClass(reader.lastScanStatus)}">${escapeHtml(reader.lastScanStatus || 'WARN')}</span>
+                <span class="reader-badge bg-light text-dark">${files.length} files</span>
+              </div>
+              <div class="reader-files">${fileHtml}</div>
+              <div class="small reader-last-scan">Last scan: ${escapeHtml(reader.lastScanAt || '-')}</div>
+              <div class="reader-card-actions">
+                <button type="button" class="btn btn-sm btn-outline-secondary edit-reader-btn">Edit</button>
+                <button type="button" class="btn btn-sm btn-outline-danger delete-reader-btn">Delete</button>
+              </div>
+            </div>
+          </article>
+        `;
+        card.querySelectorAll('.move-reader-btn').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            try {
+              const data = await moveReader(reader.readerId, btn.dataset.direction || '');
+              renderCards(data);
+            } catch (error) {
+              appendMessage(error.message);
+            }
+          });
+        });
+        card.querySelectorAll('.reader-file-link').forEach((button, fileIndex) => {
+          button.addEventListener('click', () => openFileContent(reader, files[fileIndex]));
+        });
+        card.querySelector('.edit-reader-btn').addEventListener('click', () => openReaderModal(reader));
+        card.querySelector('.delete-reader-btn').addEventListener('click', async () => {
+          if (!window.confirm(`Delete reader "${reader.name || ''}"?`)) {
+            return;
+          }
+          try {
+            const data = await deleteReader(reader.readerId);
+            renderCards(data);
+          } catch (error) {
+            appendMessage(error.message);
+          }
+        });
+        readerCards.appendChild(card);
+      });
+    }
+
+    function openReaderModal(reader) {
+      editingReaderId = reader && reader.readerId ? reader.readerId : null;
+      readerModalTitle.textContent = editingReaderId ? 'Edit reader' : 'Add reader';
+      readerNameInput.value = reader && reader.name ? reader.name : '';
+      readerLocationSelect.value = reader && reader.location ? reader.location : 'LAN';
+      readerTypeSelect.value = reader && reader.tipologia ? reader.tipologia : 'ICRON';
+      readerModal.show();
+    }
+
+    function connectWebSocket() {
+      const socket = new SockJS('/ws');
+      const client = new StompJs.Client({
+        webSocketFactory: () => socket,
+        reconnectDelay: 5000,
+        onConnect: () => {
+          wsStatus.textContent = 'Connected';
+          wsStatus.className = 'badge text-bg-success';
+          appendMessage('WebSocket connection active');
+          client.subscribe('/topic/messages', (message) => {
+            try {
+              const payload = JSON.parse(message.body);
+              appendMessage(`${payload.sender}: ${payload.content}`);
+              if (payload.sender === 'reader-view') {
+                loadRows().then(renderCards).catch((error) => appendMessage(error.message));
+              }
+            } catch (_error) {}
+          });
+        },
+        onStompError: () => {
+          wsStatus.textContent = 'Error';
+          wsStatus.className = 'badge text-bg-danger';
+        },
+        onWebSocketClose: () => {
+          wsStatus.textContent = 'Disconnected';
+          wsStatus.className = 'badge text-bg-secondary';
+        }
+      });
+      client.activate();
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    backToMenuBtn.addEventListener('click', () => { window.location.href = '/dashboard.html'; });
+    btnDetailView.addEventListener('click', () => { window.location.href = `/gara-dettaglio.html?eventId=${encodeURIComponent(getEventId())}`; });
+    btnTpView.addEventListener('click', () => { window.location.href = `/timingpointView.html?eventId=${encodeURIComponent(getEventId())}`; });
+    btnFileView.addEventListener('click', () => { window.location.href = `/fileView.html?eventId=${encodeURIComponent(getEventId())}`; });
+    btnRrLive.addEventListener('click', () => { window.location.href = `/rr-live.html?eventId=${encodeURIComponent(getEventId())}`; });
+    scanBtn.addEventListener('click', async () => {
+      try {
+        const data = await scanReaders();
+        renderCards(data);
+      } catch (error) {
+        appendMessage(error.message);
+      }
+    });
+    refreshBtn.addEventListener('click', async () => {
+      try {
+        renderCards(await loadRows());
+      } catch (error) {
+        appendMessage(error.message);
+      }
+    });
+    addReaderBtn.addEventListener('click', () => openReaderModal(null));
+    saveReaderBtn.addEventListener('click', async () => {
+      try {
+        const data = await saveReader();
+        renderCards(data);
+        readerModal.hide();
+        appendMessage(editingReaderId ? 'Reader updated' : 'Reader added');
+      } catch (error) {
+        appendMessage(error.message);
+      }
+    });
+    fileContentSearchInput.addEventListener('input', renderFileContentLines);
+    openAddReaderFileModalBtn.addEventListener('click', async () => {
+      if (!currentFileContext) return;
+      try {
+        await loadTimingPointsForAdd();
+        readerFileSourceInput.value = currentFileContext.fileName || '';
+        readerFileSyncInput.value = '+00:00:00.000';
+        readerFileFromInput.value = '';
+        readerFileToInput.value = '';
+        readerFileEveryInput.value = '10';
+        addReaderFileModal.show();
+      } catch (error) {
+        appendMessage(error.message);
+      }
+    });
+    saveReaderFileToRaceBtn.addEventListener('click', async () => {
+      if (!currentFileContext) return;
+      try {
+        const source = await materializeReaderFile(currentFileContext.readerId, currentFileContext.filePath);
+        await addFilePassaggiToRace(source);
+        appendMessage(`Added to race: ${currentFileContext.fileName}`);
+        addReaderFileModal.hide();
+        fileContentModal.hide();
+      } catch (error) {
+        appendMessage(error.message);
+      }
+    });
+    messagesToggleBtn.addEventListener('click', () => setMessagesCollapsed(!messagesPanel.classList.contains('is-collapsed')));
+
+    (async function init() {
+      if (!requireLogin()) return;
+      loadEventMeta();
+      applyModeVisibility();
+      restoreMessagesCollapsed();
+      startKeepAlive();
+      connectWebSocket();
+      try {
+        renderCards(await loadRows());
+      } catch (error) {
+        appendMessage(error.message);
+      }
+    })();
+  </script>
+</body>
+</html>

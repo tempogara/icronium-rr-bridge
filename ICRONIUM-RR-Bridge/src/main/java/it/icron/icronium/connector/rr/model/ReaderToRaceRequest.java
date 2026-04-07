@@ -1,20 +1,29 @@
 package it.icron.icronium.connector.rr.model;
 
-public class FilePassaggiRequest {
+public class ReaderToRaceRequest {
 
-    private String source;
+    private String readerId;
+    private String filePath;
     private String timingPoint;
     private Integer scaricaOgniSec;
     private String syncOffset;
     private String filterFromTime;
     private String filterToTime;
 
-    public String getSource() {
-        return source;
+    public String getReaderId() {
+        return readerId;
     }
 
-    public void setSource(String source) {
-        this.source = source;
+    public void setReaderId(String readerId) {
+        this.readerId = readerId;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
     }
 
     public String getTimingPoint() {

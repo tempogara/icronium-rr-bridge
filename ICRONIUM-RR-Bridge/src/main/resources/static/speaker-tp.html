@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Icronium Speaker TP</title>
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-icronium.svg">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #eef3f8;
+      color: #111827;
+    }
+    .speaker-shell {
+      min-height: 100vh;
+      padding: 16px;
+    }
+    .speaker-card {
+      min-height: calc(100vh - 32px);
+      border: 1px solid #d9e1ea;
+      border-radius: 20px;
+      background: #ffffff;
+      box-shadow: 0 18px 42px rgba(15, 23, 42, 0.10);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .speaker-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid #edf2f7;
+      background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+    }
+    .speaker-title {
+      font-size: 2.25rem;
+      font-weight: 800;
+      line-height: 1.1;
+      color: #0f172a;
+    }
+    .speaker-subtitle {
+      margin-top: 0.45rem;
+      color: #64748b;
+      font-size: 1.05rem;
+    }
+    .speaker-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .speaker-header-side {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .speaker-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0.45rem 0.8rem;
+      border-radius: 999px;
+      background: #e2e8f0;
+      color: #334155;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+    .speaker-card-body {
+      flex: 1 1 auto;
+      padding: 18px 22px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .speaker-monitor {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      padding: 14px 16px;
+      border: 1px solid #1b2838;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #0d1117 0%, #111827 100%);
+      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.08);
+    }
+    .speaker-summary {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .totals-box {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(72px, 1fr));
+      gap: 6px 8px;
+      align-items: center;
+    }
+    .totals-box.tzero {
+      grid-template-columns: repeat(3, minmax(72px, 1fr));
+    }
+    .totals-head {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 26px;
+      border: 1px solid #d6dae0;
+      border-radius: 8px;
+      background: #eef2f7;
+      color: #5b6673;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .totals-value {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      border: 1px solid #d6dae0;
+      border-radius: 10px;
+      background: #ffffff;
+      color: #1f2327;
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+    .totals-green {
+      background: #2e9f66;
+      border-color: #248554;
+      color: #ffffff;
+    }
+    .totals-yellow {
+      background: #f2c94c;
+      border-color: #dfb52f;
+      color: #1f2327;
+    }
+    .totals-red {
+      background: #d64545;
+      border-color: #b33434;
+      color: #ffffff;
+    }
+    .totals-blue {
+      background: #0d6efd;
+      border-color: #0b5ed7;
+      color: #ffffff;
+    }
+    .speaker-chart {
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .minute-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 180px;
+      padding: 12px;
+      border: 1px solid #d6dae0;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
+    }
+    .minute-bar {
+      flex: 1 1 0;
+      min-width: 3px;
+      border-radius: 3px 3px 0 0;
+      background: linear-gradient(180deg, #60a5fa 0%, #0d6efd 100%);
+      opacity: 0.95;
+    }
+    .minute-bar.is-empty {
+      background: #d7dee8;
+      opacity: 1;
+    }
+    .minute-chart-axis {
+      position: relative;
+      height: 22px;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+    .minute-chart-tick {
+      position: absolute;
+      top: 0;
+      transform: translateX(-50%);
+      font-size: 0.72rem;
+      color: #6c757d;
+      white-space: nowrap;
+      line-height: 1;
+    }
+    .minute-chart-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: #6c757d;
+    }
+    .minute-chart-loading,
+    .minute-chart-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 180px;
+      padding: 16px;
+      border: 1px dashed #d6dae0;
+      border-radius: 12px;
+      background: #f8f9fb;
+      color: #6c757d;
+      font-size: 0.95rem;
+    }
+    .speaker-entry {
+      display: grid;
+      grid-template-columns: 82px minmax(0, 1fr) 108px;
+      align-items: center;
+      column-gap: 12px;
+      padding: 0.36rem 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+    }
+    .speaker-entry:last-child {
+      border-bottom: 0;
+    }
+    .speaker-bib {
+      color: #f8fafc;
+      font-weight: 800;
+      font-size: 1.2rem;
+      white-space: nowrap;
+    }
+    .speaker-athlete-wrap {
+      min-width: 0;
+    }
+    .speaker-athlete {
+      color: #86efac;
+      font-weight: 800;
+      font-size: 1.5rem;
+      line-height: 1.1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .speaker-team {
+      margin-top: 0.18rem;
+      color: #cbd5e1;
+      font-size: 1rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .speaker-time {
+      color: #fbbf24;
+      font-weight: 800;
+      font-size: 1.22rem;
+      text-align: right;
+      white-space: nowrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    .speaker-empty {
+      flex: 1 1 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 1.1rem;
+    }
+    .qr-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+    }
+    .qr-image {
+      width: 260px;
+      height: 260px;
+      object-fit: contain;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #ffffff;
+      padding: 10px;
+    }
+    .qr-link {
+      max-width: 100%;
+      word-break: break-all;
+      text-align: center;
+      color: #475569;
+      font-size: 0.88rem;
+    }
+    @media (max-width: 900px) {
+      .speaker-shell {
+        padding: 10px;
+      }
+      .speaker-card {
+        min-height: calc(100vh - 20px);
+      }
+      .speaker-card-header,
+      .speaker-card-body {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+      .speaker-title {
+        font-size: 1.6rem;
+      }
+      .speaker-entry {
+        grid-template-columns: 64px minmax(0, 1fr) 88px;
+      }
+      .speaker-bib {
+        font-size: 1rem;
+      }
+      .speaker-athlete {
+        font-size: 1.1rem;
+      }
+      .speaker-team {
+        font-size: 0.86rem;
+      }
+      .speaker-time {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="speaker-shell">
+    <article class="speaker-card">
+      <div class="speaker-card-header">
+        <div>
+          <div class="speaker-title" id="speakerTitle">Timing Point</div>
+          <div class="speaker-subtitle" id="speakerSubtitle">Loading…</div>
+        </div>
+        <div class="speaker-header-side">
+          <button id="speakerQrBtn" type="button" class="btn btn-outline-secondary">QR</button>
+          <div class="speaker-status" id="speakerStatus">Connecting…</div>
+        </div>
+      </div>
+      <div class="speaker-card-body">
+        <div id="speakerBody" class="speaker-monitor"></div>
+        <div class="speaker-summary">
+          <div id="speakerTotals"></div>
+        </div>
+        <div id="speakerChart" class="speaker-chart">
+          <div class="minute-chart-loading">Loading minute chart...</div>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <div class="modal fade" id="speakerQrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Speaker QR</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="qr-box">
+            <img id="speakerQrImage" class="qr-image" alt="Speaker QR">
+            <div id="speakerQrLink" class="qr-link"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const STORAGE_KEYS = {
+      auth: 'rr.auth'
+    };
+
+    const speakerTitle = document.getElementById('speakerTitle');
+    const speakerSubtitle = document.getElementById('speakerSubtitle');
+    const speakerStatus = document.getElementById('speakerStatus');
+    const speakerBody = document.getElementById('speakerBody');
+    const speakerTotals = document.getElementById('speakerTotals');
+    const speakerChart = document.getElementById('speakerChart');
+    const speakerQrBtn = document.getElementById('speakerQrBtn');
+    const speakerQrImage = document.getElementById('speakerQrImage');
+    const speakerQrLink = document.getElementById('speakerQrLink');
+    const speakerQrModal = new bootstrap.Modal(document.getElementById('speakerQrModal'));
+
+    let currentRows = [];
+    let refreshTimerId = null;
+    let publicToken = '';
+
+    function getQueryParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(name) || '';
+    }
+
+    function getEventId() {
+      return getQueryParam('eventId');
+    }
+
+    function getTimingPoint() {
+      return getQueryParam('timingPoint');
+    }
+
+    function getToken() {
+      return getQueryParam('token');
+    }
+
+    function requireLogin() {
+      if (!localStorage.getItem(STORAGE_KEYS.auth)) {
+        window.location.href = '/index.html';
+        return false;
+      }
+      return true;
+    }
+
+    function redirectToLogin() {
+      localStorage.removeItem(STORAGE_KEYS.auth);
+      window.location.href = '/index.html';
+    }
+
+    function setStatus(text) {
+      speakerStatus.textContent = text;
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(url);
+      if (response.status === 401 && !publicToken) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error(`Error loading ${url}`);
+      }
+      return response.json();
+    }
+
+    async function fetchText(url) {
+      const response = await fetch(url);
+      if (response.status === 401 && !publicToken) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error(`Error loading ${url}`);
+      }
+      return response.text();
+    }
+
+    function extractChipFromPassingLine(line) {
+      const raw = (line || '').trim();
+      if (!raw || raw.includes('*')) {
+        return null;
+      }
+      const separator = raw.includes('\t') ? '\t' : ';';
+      return raw.split(separator)[0].replaceAll('"', '').trim() || null;
+    }
+
+    function extractTimestampFromPassingLine(line) {
+      const raw = (line || '').trim();
+      if (!raw) {
+        return '';
+      }
+      const separator = raw.includes('\t') ? '\t' : ';';
+      const parts = raw.split(separator);
+      return parts.length > 1 ? parts[1].replaceAll('"', '').trim() : '';
+    }
+
+    function extractTimeOnlyFromTimestamp(timestamp) {
+      const match = String(timestamp || '').match(/(\d{2}:\d{2}:\d{2}(?:[.,]\d+)?|\d{2}:\d{2})/);
+      return match ? match[1].replace(/[.,]\d+$/, '') : String(timestamp || '').trim();
+    }
+
+    function buildAthleteMap(data) {
+      const map = new Map();
+      (data && Array.isArray(data.rows) ? data.rows : []).forEach((row) => {
+        const chip = row && row.chip ? String(row.chip).trim() : '';
+        if (!chip) {
+          return;
+        }
+        map.set(chip, {
+          bib: row && row.bib != null ? String(row.bib).trim() : '',
+          athlete: `${row && row.firstName ? String(row.firstName).trim() : ''} ${row && row.lastName ? String(row.lastName).trim() : ''}`.trim(),
+          team: row && row.team ? String(row.team).trim() : ''
+        });
+      });
+      return map;
+    }
+
+    function renderPassings(entries) {
+      speakerBody.innerHTML = '';
+      if (!entries.length) {
+        speakerBody.innerHTML = '<div class="speaker-empty">No readings available for this timing point.</div>';
+        return;
+      }
+      entries.forEach((entry) => {
+        const row = document.createElement('div');
+        row.className = 'speaker-entry';
+        row.innerHTML = `
+          <div class="speaker-bib">${escapeHtml(entry.bib || '-')}</div>
+          <div class="speaker-athlete-wrap">
+            <div class="speaker-athlete" title="${escapeHtml(entry.athlete || '')}">${escapeHtml(entry.athlete || entry.chip || '')}</div>
+            <div class="speaker-team" title="${escapeHtml(entry.team || '')}">${escapeHtml(entry.team || '')}</div>
+          </div>
+          <div class="speaker-time">${escapeHtml(extractTimeOnlyFromTimestamp(entry.timestamp || ''))}</div>
+        `;
+        speakerBody.appendChild(row);
+      });
+    }
+
+    function buildSharedTimeline(firstMinute, latestMinute) {
+      const timeline = [];
+      if (!(firstMinute instanceof Date) || Number.isNaN(firstMinute.getTime()) || !(latestMinute instanceof Date) || Number.isNaN(latestMinute.getTime())) {
+        return timeline;
+      }
+      firstMinute.setSeconds(0, 0);
+      latestMinute.setSeconds(0, 0);
+      for (let cursor = firstMinute.getTime(); cursor <= latestMinute.getTime(); cursor += 60000) {
+        timeline.push(new Date(cursor));
+      }
+      return timeline;
+    }
+
+    function parseTimestampToMinute(timestamp) {
+      const value = (timestamp || '').trim();
+      if (!value) {
+        return null;
+      }
+      let match = value.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+      if (match) {
+        return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]), 0, 0);
+      }
+      match = value.match(/^(\d{2})\.(\d{2})\.(\d{4})[ T](\d{2}):(\d{2})/);
+      if (match) {
+        return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), Number(match[4]), Number(match[5]), 0, 0);
+      }
+      match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})[ T](\d{2}):(\d{2})/);
+      if (match) {
+        return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), Number(match[4]), Number(match[5]), 0, 0);
+      }
+      match = value.match(/(\d{2}):(\d{2})(?::\d{2}(?:[.,]\d+)?)?/);
+      if (match) {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(match[1]), Number(match[2]), 0, 0);
+      }
+      return null;
+    }
+
+    function minuteDateKey(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    }
+
+    function formatMinuteLabel(date) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${day}/${month} ${hours}:${minutes}`;
+    }
+
+    function buildMinuteChartHtml(minuteMap, timeline) {
+      if (!timeline.length) {
+        return '<div class="minute-chart-empty">No timestamped readings</div>';
+      }
+      const counts = timeline.map((date) => minuteMap.get(minuteDateKey(date)) || 0);
+      const total = counts.reduce((sum, count) => sum + count, 0);
+      if (total === 0) {
+        return '<div class="minute-chart-empty">No timestamped readings</div>';
+      }
+      const maxCount = counts.reduce((max, count) => Math.max(max, count), 0) || 1;
+      const bars = timeline.map((date, index) => {
+        const count = counts[index];
+        const height = count > 0 ? Math.max(8, Math.round((count / maxCount) * 100)) : 6;
+        const barClass = count > 0 ? 'minute-bar' : 'minute-bar is-empty';
+        const label = formatMinuteLabel(date);
+        return `<div class="${barClass}" style="height:${height}%;" title="${escapeHtml(label)} - ${count} readings"></div>`;
+      }).join('');
+      const tickIndexes = timeline
+        .map((date, index) => ({ date, index }))
+        .filter(({ index }) => index === 0 || index === (timeline.length - 1) || (index % 15) === 0);
+      const ticks = tickIndexes.map(({ date, index }) => {
+        const left = timeline.length <= 1 ? 0 : ((index / (timeline.length - 1)) * 100);
+        const tickLabel = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        return `<span class="minute-chart-tick" style="left:${left}%;">${escapeHtml(tickLabel)}</span>`;
+      }).join('');
+      return `
+        <div class="minute-chart">${bars}</div>
+        <div class="minute-chart-axis">${ticks}</div>
+        <div class="minute-chart-meta">
+          <span>${escapeHtml(formatMinuteLabel(timeline[0]))}</span>
+          <span>${timeline.length} min window</span>
+          <span>${escapeHtml(formatMinuteLabel(timeline[timeline.length - 1]))}</span>
+        </div>
+      `;
+    }
+
+    function renderTotals(read, sent, discarded, unique) {
+      renderTotalsWithMode(read, sent, discarded, unique, true);
+    }
+
+    function renderTotalsWithMode(read, sent, discarded, unique, showSent) {
+      const readClass = read > 0 ? 'totals-value totals-green' : 'totals-value';
+      let sentClass = 'totals-value totals-red';
+      if (sent > 0 && sent < read) {
+        sentClass = 'totals-value totals-yellow';
+      } else if (sent > 0 && sent === read) {
+        sentClass = 'totals-value totals-green';
+      }
+      const uniqueClass = unique > 0 ? 'totals-value totals-blue' : 'totals-value';
+      const discardedClass = discarded > 0 ? 'totals-value totals-red' : 'totals-value';
+      speakerTotals.innerHTML = `
+        <div class="totals-box ${showSent ? '' : 'tzero'}">
+          <span class="totals-head">READ</span>
+          ${showSent ? '<span class="totals-head">SENT</span>' : ''}
+          <span class="totals-head">DISC</span>
+          <span class="totals-head">UNIQUE</span>
+          <span class="${readClass}">${read}</span>
+          ${showSent ? `<span class="${sentClass}">${sent}</span>` : ''}
+          <span class="${discardedClass}">${discarded}</span>
+          <span class="${uniqueClass}">${unique}</span>
+        </div>
+      `;
+    }
+
+    function collectUniqueRecentEntries(entries, limit) {
+      const sorted = (Array.isArray(entries) ? [...entries] : [])
+        .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+      const uniqueEntries = [];
+      const seen = new Set();
+      for (const entry of sorted) {
+        const key = String(entry && (entry.bib || entry.chip || entry.athlete || '')).trim();
+        if (!key || seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
+        uniqueEntries.push(entry);
+        if (uniqueEntries.length >= limit) {
+          break;
+        }
+      }
+      return uniqueEntries.reverse();
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    async function loadRows() {
+      const eventId = getEventId();
+      return fetchJson(`/api/gare/${encodeURIComponent(eventId)}/rows`);
+    }
+
+    async function loadBibChip() {
+      const eventId = getEventId();
+      return fetchJson(`/api/gare/${encodeURIComponent(eventId)}/bib-chip`);
+    }
+
+    async function loadRowFileContent(rowId) {
+      const eventId = getEventId();
+      return fetchText(`/api/gare/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowId)}/content`);
+    }
+
+    async function loadSpeakerUrl() {
+      const eventId = getEventId();
+      const timingPoint = getTimingPoint();
+      return fetchJson(`/api/gare/${encodeURIComponent(eventId)}/speaker-url/${encodeURIComponent(timingPoint)}`);
+    }
+
+    async function loadPublicSpeaker() {
+      return fetchJson(`/api/public/speaker/${encodeURIComponent(publicToken)}`);
+    }
+
+    function buildMinuteChartFromBuckets(buckets) {
+      const timeline = Array.isArray(buckets) ? buckets : [];
+      if (!timeline.length) {
+        return '<div class="minute-chart-empty">No timestamped readings</div>';
+      }
+      const counts = timeline.map((item) => Number(item && item.count) || 0);
+      const total = counts.reduce((sum, count) => sum + count, 0);
+      if (total === 0) {
+        return '<div class="minute-chart-empty">No timestamped readings</div>';
+      }
+      const maxCount = counts.reduce((max, count) => Math.max(max, count), 0) || 1;
+      const bars = timeline.map((item) => {
+        const count = Number(item && item.count) || 0;
+        const height = count > 0 ? Math.max(8, Math.round((count / maxCount) * 100)) : 6;
+        const barClass = count > 0 ? 'minute-bar' : 'minute-bar is-empty';
+        const label = item && item.displayLabel ? item.displayLabel : '';
+        return `<div class="${barClass}" style="height:${height}%;" title="${escapeHtml(label)} - ${count} readings"></div>`;
+      }).join('');
+      const tickIndexes = timeline
+        .map((item, index) => ({ item, index }))
+        .filter(({ index }) => index === 0 || index === (timeline.length - 1) || (index % 15) === 0);
+      const ticks = tickIndexes.map(({ item, index }) => {
+        const left = timeline.length <= 1 ? 0 : ((index / (timeline.length - 1)) * 100);
+        const tickLabel = String(item && item.displayLabel ? item.displayLabel : '').split(' ').pop();
+        return `<span class="minute-chart-tick" style="left:${left}%;">${escapeHtml(tickLabel)}</span>`;
+      }).join('');
+      const firstMinute = timeline[0] && timeline[0].displayLabel ? timeline[0].displayLabel : '';
+      const lastMinute = timeline[timeline.length - 1] && timeline[timeline.length - 1].displayLabel ? timeline[timeline.length - 1].displayLabel : '';
+      return `
+        <div class="minute-chart">${bars}</div>
+        <div class="minute-chart-axis">${ticks}</div>
+        <div class="minute-chart-meta">
+          <span>${escapeHtml(firstMinute)}</span>
+          <span>${timeline.length} min window</span>
+          <span>${escapeHtml(lastMinute)}</span>
+        </div>
+      `;
+    }
+
+    function renderPublicResponse(data) {
+      speakerTitle.textContent = data && data.timingPoint ? data.timingPoint : 'Timing Point';
+      speakerSubtitle.textContent = `${data && data.eventId ? data.eventId : ''} · ${Number(data && data.sourceCount) || 0} sources`;
+      renderPassings(Array.isArray(data && data.lastPassings) ? data.lastPassings : []);
+      renderTotalsWithMode(
+        Number(data && data.read) || 0,
+        Number(data && data.sent) || 0,
+        Number(data && data.discarded) || 0,
+        Number(data && data.unique) || 0,
+        Boolean(data && data.showSent)
+      );
+      speakerChart.innerHTML = buildMinuteChartFromBuckets(data && data.minuteBuckets);
+    }
+
+    async function refreshView() {
+      if (publicToken) {
+        const data = await loadPublicSpeaker();
+        renderPublicResponse(data);
+        return;
+      }
+
+      const eventId = getEventId();
+      const timingPoint = getTimingPoint();
+      if (!eventId || !timingPoint) {
+        speakerSubtitle.textContent = 'Missing eventId or timingPoint';
+        renderPassings([]);
+        return;
+      }
+
+      const [rows, bibChipData] = await Promise.all([loadRows(), loadBibChip().catch(() => ({ rows: [] }))]);
+      currentRows = Array.isArray(rows) ? rows : [];
+      const groupRows = currentRows.filter((row) => String(row && row.timingPoint ? row.timingPoint : '') === timingPoint);
+      speakerSubtitle.textContent = `${eventId} · ${groupRows.length} sources`;
+
+      const athleteMap = buildAthleteMap(bibChipData);
+      const minuteMap = new Map();
+      let firstMinute = null;
+      let latestMinute = null;
+      let discarded = 0;
+      const contents = await Promise.all(groupRows.map(async (row) => ({
+        row,
+        content: await loadRowFileContent(row.rowId).catch(() => '')
+      })));
+      const entries = contents.flatMap(({ row, content }) => {
+        const blacklisted = new Set(Array.isArray(row && row.blacklistedCodes) ? row.blacklistedCodes : []);
+        const knownChips = new Set((bibChipData && Array.isArray(bibChipData.rows) ? bibChipData.rows : []).map((item) => String(item && item.chip ? item.chip : '').trim()).filter(Boolean));
+        return String(content || '')
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter((line) => line && !line.includes('*'))
+          .filter((line) => {
+            const chip = extractChipFromPassingLine(line);
+            return !chip || !blacklisted.has(chip);
+          })
+          .map((line) => {
+            const chip = extractChipFromPassingLine(line) || '';
+            const meta = athleteMap.get(chip) || {};
+            const timestamp = extractTimestampFromPassingLine(line);
+            const minuteDate = parseTimestampToMinute(timestamp);
+            if (minuteDate) {
+              if (!firstMinute || minuteDate.getTime() < firstMinute.getTime()) {
+                firstMinute = new Date(minuteDate.getTime());
+              }
+              if (!latestMinute || minuteDate.getTime() > latestMinute.getTime()) {
+                latestMinute = new Date(minuteDate.getTime());
+              }
+              const key = minuteDateKey(minuteDate);
+              minuteMap.set(key, (minuteMap.get(key) || 0) + 1);
+            }
+            if (chip && !knownChips.has(chip)) {
+              discarded += 1;
+            }
+            return {
+              chip,
+              bib: meta.bib || '',
+              athlete: meta.athlete || chip,
+              team: meta.team || '',
+              timestamp
+            };
+          });
+      });
+
+      const uniqueEntries = collectUniqueRecentEntries(entries, 10);
+      renderPassings(uniqueEntries);
+      renderTotals(entries.length, 0, discarded, uniqueEntries.length);
+      speakerChart.innerHTML = buildMinuteChartHtml(minuteMap, buildSharedTimeline(firstMinute, latestMinute));
+    }
+
+    function connectWebSocket() {
+      const socket = new SockJS('/ws');
+      const client = new StompJs.Client({
+        webSocketFactory: () => socket,
+        reconnectDelay: 5000,
+        onConnect: () => {
+          setStatus('Connected');
+          client.subscribe('/topic/gare-updates', async (message) => {
+            try {
+              const payload = JSON.parse(message.body);
+              if (!payload || payload.eventId !== getEventId()) {
+                return;
+              }
+              await refreshView();
+            } catch (_error) {
+            }
+          });
+        },
+        onStompError: () => {
+          setStatus('Error');
+        },
+        onWebSocketClose: () => {
+          setStatus('Disconnected');
+        }
+      });
+      client.activate();
+    }
+
+    function startPolling() {
+      if (refreshTimerId) {
+        window.clearInterval(refreshTimerId);
+      }
+      refreshTimerId = window.setInterval(() => {
+        refreshView().catch(() => {});
+      }, 5000);
+    }
+
+    async function openQrModal() {
+      const url = window.location.href;
+      if (!url) {
+        throw new Error('Speaker URL not available');
+      }
+      speakerQrLink.textContent = url;
+      speakerQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(url)}`;
+      speakerQrModal.show();
+    }
+
+    (async function init() {
+      publicToken = getToken();
+      if (!publicToken && !requireLogin()) {
+        return;
+      }
+      speakerTitle.textContent = getTimingPoint() || 'Timing Point';
+      try {
+        await refreshView();
+      } catch (error) {
+        speakerSubtitle.textContent = error.message;
+        renderPassings([]);
+      }
+      speakerQrBtn.addEventListener('click', async () => {
+        try {
+          await openQrModal();
+        } catch (error) {
+          speakerSubtitle.textContent = error.message;
+        }
+      });
+      startPolling();
+      if (!publicToken) {
+        connectWebSocket();
+      } else {
+        setStatus('Connected');
+      }
+    })();
+  </script>
+</body>
+</html>

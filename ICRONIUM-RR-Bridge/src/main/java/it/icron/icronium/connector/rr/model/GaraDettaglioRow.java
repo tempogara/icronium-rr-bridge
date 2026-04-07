@@ -10,6 +10,8 @@ public class GaraDettaglioRow {
     private String sourceKind;
     private String timingPoint;
     private String syncOffset = "+00:00:00.000";
+    private String filterFromTime = "";
+    private String filterToTime = "";
     private String stato;
     private int scaricaOgniSec;
     private String ultimoDownload;
@@ -89,6 +91,22 @@ public class GaraDettaglioRow {
 
     public void setSyncOffset(String syncOffset) {
         this.syncOffset = syncOffset;
+    }
+
+    public String getFilterFromTime() {
+        return filterFromTime;
+    }
+
+    public void setFilterFromTime(String filterFromTime) {
+        this.filterFromTime = filterFromTime;
+    }
+
+    public String getFilterToTime() {
+        return filterToTime;
+    }
+
+    public void setFilterToTime(String filterToTime) {
+        this.filterToTime = filterToTime;
     }
 
     public int getScaricaOgniSec() {

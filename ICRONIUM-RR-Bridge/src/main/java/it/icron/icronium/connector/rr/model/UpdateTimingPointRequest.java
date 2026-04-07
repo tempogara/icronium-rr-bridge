@@ -6,6 +6,8 @@ public class UpdateTimingPointRequest {
     private String timingPoint;
     private Integer scaricaOgniSec;
     private String syncOffset;
+    private String filterFromTime;
+    private String filterToTime;
 
     public String getSource() {
         return source;
@@ -37,5 +39,21 @@ public class UpdateTimingPointRequest {
 
     public void setSyncOffset(String syncOffset) {
         this.syncOffset = syncOffset;
+    }
+
+    public String getFilterFromTime() {
+        return filterFromTime;
+    }
+
+    public void setFilterFromTime(String filterFromTime) {
+        this.filterFromTime = filterFromTime;
+    }
+
+    public String getFilterToTime() {
+        return filterToTime;
+    }
+
+    public void setFilterToTime(String filterToTime) {
+        this.filterToTime = filterToTime;
     }
 }

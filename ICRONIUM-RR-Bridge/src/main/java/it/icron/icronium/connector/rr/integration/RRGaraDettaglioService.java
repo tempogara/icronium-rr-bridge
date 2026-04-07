@@ -25,6 +25,7 @@ import java.io.BufferedReader;
 import java.nio.file.Path;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -62,9 +63,15 @@ public class RRGaraDettaglioService {
     private static final DateTimeFormatter DOWNLOAD_TS_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter SIMULATED_TS_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
     private static final DateTimeFormatter SIMULATED_INPUT_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm[:ss]");
+    private static final DateTimeFormatter[] PASSING_TIME_FORMATTERS = new DateTimeFormatter[] {
+            DateTimeFormatter.ofPattern("HH:mm:ss.SSS"),
+            DateTimeFormatter.ofPattern("HH:mm:ss,SSS"),
+            DateTimeFormatter.ofPattern("HH:mm:ss")
+    };
     private static final int MAX_DELTA_HISTORY = 10;
     private static final int MAX_CONTENT_PREVIEW_CHARS = 200_000;
     private static final Pattern SYNC_OFFSET_PATTERN = Pattern.compile("^[+-]\\d{2}:\\d{2}:\\d{2}\\.\\d{3}$");
+    private static final Pattern FILTER_TIME_PATTERN = Pattern.compile("^\\d{2}:\\d{2}:\\d{2}(?:[\\.,]\\d{1,3})?$");
 
     public RRGaraDettaglioService(RRSessionService sessionService, TZeroConfigService tZeroConfigService, ActiveEventService activeEventService, ObjectMapper objectMapper, GaraDettaglioRepository repository, SimpMessagingTemplate messagingTemplate) {
         this.sessionService = sessionService;
@@ -174,6 +181,13 @@ public class RRGaraDettaglioService {
     public TimingPointResponse getTimingPoints(String eventId) throws Exception {
         sessionService.requireAuthenticated();
         markEventActive(eventId);
+        if (sessionService.isTZeroMode()) {
+            List<String> timingPoints = tZeroConfigService.loadTimingPoints(sessionService.getTZeroRootFolder(), eventId).stream()
+                    .map(tp -> tp.getName() == null ? "" : tp.getName().trim())
+                    .filter(value -> !value.isBlank())
+                    .toList();
+            return new TimingPointResponse(eventId, timingPoints.size(), timingPoints);
+        }
         RRGaraSyncData syncData = sessionService.getSyncData(eventId);
         if (syncData != null) {
             List<String> timingPoints = syncData.getTimingPoints();
@@ -245,16 +259,20 @@ public class RRGaraDettaglioService {
         try (BufferedReader reader = Files.newBufferedReader(path)) {
             String line;
             while ((line = reader.readLine()) != null) {
-                int needed = line.length() + 1;
+                if (isIgnoredPassingLine(line, row)) {
+                    continue;
+                }
+                String filteredLine = line.trim();
+                int needed = filteredLine.length() + 1;
                 if (totalChars + needed > MAX_CONTENT_PREVIEW_CHARS) {
                     int remaining = MAX_CONTENT_PREVIEW_CHARS - totalChars;
                     if (remaining > 0) {
-                        sb.append(line, 0, Math.min(remaining, line.length()));
+                        sb.append(filteredLine, 0, Math.min(remaining, filteredLine.length()));
                     }
                     sb.append(System.lineSeparator()).append("... [truncated]");
                     break;
                 }
-                sb.append(line).append(System.lineSeparator());
+                sb.append(filteredLine).append(System.lineSeparator());
                 totalChars += needed;
             }
         }
@@ -293,6 +311,9 @@ public class RRGaraDettaglioService {
         snapshot.setRows(rows);
         enrichSnapshotConnectionFromSession(snapshot);
         repository.save(snapshot);
+        if (sessionService.isTZeroMode() && request.getTimingPoint() != null && !request.getTimingPoint().isBlank()) {
+            tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, extractFileName(request.getUrl().trim()), request.getTimingPoint().trim());
+        }
         return rows;
     }
 
@@ -328,6 +349,9 @@ public class RRGaraDettaglioService {
         snapshot.setRows(rows);
         enrichSnapshotConnectionFromSession(snapshot);
         repository.save(snapshot);
+        if (sessionService.isTZeroMode() && request.getTimingPoint() != null && !request.getTimingPoint().isBlank()) {
+            tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, extractFileName(request.getLocalPath().trim()), request.getTimingPoint().trim());
+        }
         return rows;
     }
 
@@ -358,10 +382,15 @@ public class RRGaraDettaglioService {
         ));
         rows.get(rows.size() - 1).setSourceKind(resolveSourceKind(request.getSource().trim(), null));
         rows.get(rows.size() - 1).setSyncOffset(sanitizeSyncOffset(request.getSyncOffset()));
+        rows.get(rows.size() - 1).setFilterFromTime(sanitizeFilterTime(request.getFilterFromTime()));
+        rows.get(rows.size() - 1).setFilterToTime(sanitizeFilterTime(request.getFilterToTime()));
 
         snapshot.setRows(rows);
         enrichSnapshotConnectionFromSession(snapshot);
         repository.save(snapshot);
+        if (sessionService.isTZeroMode() && request.getTimingPoint() != null && !request.getTimingPoint().isBlank()) {
+            tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, extractFileName(request.getSource().trim()), request.getTimingPoint().trim());
+        }
         return rows;
     }
 
@@ -435,6 +464,9 @@ public class RRGaraDettaglioService {
         snapshot.getRows().add(row);
         enrichSnapshotConnectionFromSession(snapshot);
         repository.save(snapshot);
+        if (sessionService.isTZeroMode()) {
+            tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, simulatedFile.getFileName().toString(), timingPoint);
+        }
         return snapshot.getRows();
     }
 
@@ -450,6 +482,10 @@ public class RRGaraDettaglioService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Riga non trovata"));
         if (!isStopped(row)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cancellazione consentita solo in stato Stopped");
+        }
+        if (sessionService.isTZeroMode()) {
+            tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, extractFileName(row.getSource()), "");
+            deleteTZeroSourceFileIfPresent(row);
         }
         deleteSimulatedFileIfNeeded(row);
         snapshot.getRows().remove(row);
@@ -468,6 +504,10 @@ public class RRGaraDettaglioService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cancellazione totale consentita solo con righe Stopped");
         }
         for (GaraDettaglioRow row : snapshot.getRows()) {
+            if (sessionService.isTZeroMode()) {
+                tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, extractFileName(row.getSource()), "");
+                deleteTZeroSourceFileIfPresent(row);
+            }
             deleteSimulatedFileIfNeeded(row);
         }
         snapshot.setRows(new ArrayList<>());
@@ -546,6 +586,17 @@ public class RRGaraDettaglioService {
                 row.setTimingPoint(request.getTimingPoint() == null ? "" : request.getTimingPoint().trim());
                 row.setScaricaOgniSec(sanitizeScaricaOgniSec(request.getScaricaOgniSec()));
                 row.setSyncOffset(sanitizeSyncOffset(request.getSyncOffset()));
+                row.setFilterFromTime(sanitizeFilterTime(request.getFilterFromTime()));
+                row.setFilterToTime(sanitizeFilterTime(request.getFilterToTime()));
+                applyAction(row, "rewind", false);
+                if (sessionService.isTZeroMode()) {
+                    tZeroConfigService.assignSourceToTimingPoint(
+                            sessionService.getTZeroRootFolder(),
+                            eventId,
+                            extractFileName(request.getSource().trim()),
+                            request.getTimingPoint() == null ? "" : request.getTimingPoint().trim()
+                    );
+                }
                 found = true;
                 break;
             }
@@ -782,6 +833,7 @@ public class RRGaraDettaglioService {
         int chipIndex = 1;
         int lastNameIndex = 2;
         int firstNameIndex = 3;
+        int teamIndex = -1;
         boolean headerProcessed = false;
 
         for (String line : lines) {
@@ -801,6 +853,7 @@ public class RRGaraDettaglioService {
                 chipIndex = findColumnIndex(parts, "CHIP", "CHIPS", "TRANSPONDER");
                 lastNameIndex = findColumnIndex(parts, "LASTNAME", "COGNOME", "SURNAME");
                 firstNameIndex = findColumnIndex(parts, "FIRSTNAME", "NOME", "NAME");
+                teamIndex = findColumnIndex(parts, "TEAM", "TEAMNAME", "SQUADRA", "CLUB", "SOCIETA");
                 headerProcessed = true;
                 continue;
             }
@@ -810,6 +863,7 @@ public class RRGaraDettaglioService {
             String chipsText = getColumnValue(parts, chipIndex);
             String lastName = getColumnValue(parts, lastNameIndex);
             String firstName = getColumnValue(parts, firstNameIndex);
+            String team = getColumnValue(parts, teamIndex);
             if (chipsText.isEmpty()) {
                 continue;
             }
@@ -827,7 +881,7 @@ public class RRGaraDettaglioService {
                     .toList();
 
             for (String chip : chips) {
-                rows.add(new BibChipRow(chip, bib, lastName, firstName));
+                rows.add(new BibChipRow(chip, bib, lastName, firstName, team));
             }
         }
 
@@ -893,6 +947,7 @@ public class RRGaraDettaglioService {
         }
 
         List<String> timingPoints = new ArrayList<>();
+        Map<String, String> timingPointBySource = tZeroConfigService.buildTimingPointBySourceMap(rootFolder, eventId);
         GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
                 .orElseGet(() -> createSnapshotFromSession(eventId));
         ensureRowIds(snapshot);
@@ -908,12 +963,10 @@ public class RRGaraDettaglioService {
         for (Path filePath : filePaths) {
             String normalizedSource = filePath.toAbsolutePath().normalize().toString();
             GaraDettaglioRow existing = existingBySource.get(normalizedSource);
+            String configuredTimingPoint = timingPointBySource.getOrDefault(filePath.getFileName().toString().toLowerCase(), "");
             if (existing != null) {
-                String currentTimingPoint = existing.getTimingPoint() == null ? "" : existing.getTimingPoint().trim();
-                if (currentTimingPoint.equals(legacyDerivedTZeroTimingPoint(filePath))) {
-                    existing.setTimingPoint("");
-                    currentTimingPoint = "";
-                }
+                String currentTimingPoint = configuredTimingPoint;
+                existing.setTimingPoint(currentTimingPoint);
                 updatedRows.add(existing);
                 if (!currentTimingPoint.isBlank()) {
                     timingPoints.add(currentTimingPoint);
@@ -924,7 +977,7 @@ public class RRGaraDettaglioService {
             GaraDettaglioRow newRow = new GaraDettaglioRow(
                     UUID.randomUUID().toString(),
                     normalizedSource,
-                    "",
+                    configuredTimingPoint,
                     "Stopped",
                     10,
                     "",
@@ -935,6 +988,9 @@ public class RRGaraDettaglioService {
             newRow.setSourceKind("local");
             newRow.setSyncOffset("+00:00:00.000");
             updatedRows.add(newRow);
+            if (!configuredTimingPoint.isBlank()) {
+                timingPoints.add(configuredTimingPoint);
+            }
         }
 
         snapshot.setRows(updatedRows);
@@ -951,21 +1007,6 @@ public class RRGaraDettaglioService {
         sessionService.saveSyncData(eventId, new RRGaraSyncData(participantsCount, distinctTimingPoints, bibChipRows));
 
         return new GaraSyncResponse(eventId, buildEventLandingUrl(eventId), participantsCount, distinctTimingPoints);
-    }
-
-    private String legacyDerivedTZeroTimingPoint(Path filePath) {
-        if (filePath == null || filePath.getFileName() == null) {
-            return "";
-        }
-        String value = filePath.getFileName().toString();
-        if (value.startsWith("file-")) {
-            value = value.substring(5);
-        }
-        int dotIndex = value.lastIndexOf('.');
-        if (dotIndex > 0) {
-            value = value.substring(0, dotIndex);
-        }
-        return value.trim();
     }
 
     private GaraDettaglioSnapshot createSnapshotFromSession(String eventId) {
@@ -1578,6 +1619,9 @@ public class RRGaraDettaglioService {
         if (trimmed.isEmpty() || trimmed.contains("*")) {
             return true;
         }
+        if (!passesRowTimeFilter(trimmed, row)) {
+            return true;
+        }
         String code = extractPassingCode(trimmed);
         return code != null && row != null && row.getBlacklistedCodes() != null && row.getBlacklistedCodes().contains(code);
     }
@@ -1593,6 +1637,82 @@ public class RRGaraDettaglioService {
         }
         String code = parts[0].replace("\"", "").trim();
         return code.isEmpty() ? null : code;
+    }
+
+    public static String extractPassingTimestamp(String line) {
+        if (line == null || line.isBlank()) {
+            return "";
+        }
+        String separator = line.contains("\t") ? "\t" : ";";
+        String[] parts = line.split(separator);
+        if (parts.length < 2) {
+            return "";
+        }
+        return parts[1].replace("\"", "").trim();
+    }
+
+    public static Long parsePassingTimeToMillis(String timestamp) {
+        String value = timestamp == null ? "" : timestamp.trim();
+        if (value.isBlank()) {
+            return null;
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d{2}:\\d{2}:\\d{2}(?:[\\.,]\\d{1,3})?)").matcher(value);
+        if (matcher.find()) {
+            value = matcher.group(1);
+        }
+        for (DateTimeFormatter formatter : PASSING_TIME_FORMATTERS) {
+            try {
+                java.time.LocalTime time = java.time.LocalTime.parse(value.replace(',', '.'), formatter);
+                return (time.toSecondOfDay() * 1000L) + (time.getNano() / 1_000_000L);
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+        return null;
+    }
+
+    public static boolean passesTimeFilter(String line, String from, String to) {
+        String fromValue = from == null ? "" : from.trim();
+        String toValue = to == null ? "" : to.trim();
+        if (fromValue.isBlank() && toValue.isBlank()) {
+            return true;
+        }
+        Long value = parsePassingTimeToMillis(extractPassingTimestamp(line));
+        if (value == null) {
+            return false;
+        }
+        Long fromMillis = fromValue.isBlank() ? null : parsePassingTimeToMillis(fromValue);
+        Long toMillis = toValue.isBlank() ? null : parsePassingTimeToMillis(toValue);
+        if (fromMillis == null && toMillis == null) {
+            return true;
+        }
+        if (fromMillis != null && toMillis != null) {
+            if (fromMillis <= toMillis) {
+                return value >= fromMillis && value <= toMillis;
+            }
+            return value >= fromMillis || value <= toMillis;
+        }
+        if (fromMillis != null) {
+            return value >= fromMillis;
+        }
+        return value <= toMillis;
+    }
+
+    private boolean passesRowTimeFilter(String line, GaraDettaglioRow row) {
+        if (row == null) {
+            return true;
+        }
+        return passesTimeFilter(line, row.getFilterFromTime(), row.getFilterToTime());
+    }
+
+    private String sanitizeFilterTime(String value) {
+        String trimmed = value == null ? "" : value.trim();
+        if (trimmed.isBlank()) {
+            return "";
+        }
+        if (!FILTER_TIME_PATTERN.matcher(trimmed).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato filtro tempo non valido: usare HH:mm:ss o HH:mm:ss.SSS");
+        }
+        return trimmed.replace(',', '.');
     }
 
     private void refreshVisibleCount(GaraDettaglioRow row) {
@@ -1635,13 +1755,18 @@ public class RRGaraDettaglioService {
 
             String host = snapshot.getRrHost();
             String pw = snapshot.getRrPw();
-            if (host == null || host.isBlank() || pw == null || pw.isBlank()) {
+            if (!sessionService.isTZeroMode() && (host == null || host.isBlank() || pw == null || pw.isBlank())) {
                 log.warn("[{}/{}] Invio esterno saltato: connessione RR non inizializzata nello snapshot", eventId, row.getRowId());
                 return new PostBatchResult(row.getUploadedLines(), new ArrayList<>());
             }
 
             ConnectorContext ctx = new ConnectorContext();
-            ctx.setRrId(buildEventLandingUrl(host, eventId, pw));
+            if (sessionService.isTZeroMode()) {
+                ctx.setSimulateOnly(true);
+                ctx.setRrId(eventId);
+            } else {
+                ctx.setRrId(buildEventLandingUrl(host, eventId, pw));
+            }
             ctx.setChipBibMap(chipBibMap);
 
             PostBatchResult result = PostDowloader.postDeltaBatch(downloadedPath, row, ctx);
@@ -1780,5 +1905,35 @@ public class RRGaraDettaglioService {
             }
         } catch (Exception ignored) {
         }
+    }
+
+    private void deleteTZeroSourceFileIfPresent(GaraDettaglioRow row) {
+        if (row == null || row.getSource() == null || row.getSource().isBlank()) {
+            return;
+        }
+        try {
+            Path source = Paths.get(row.getSource().trim()).toAbsolutePath().normalize();
+            if (Files.exists(source) && Files.isRegularFile(source)) {
+                Path deletedDir = source.getParent() == null
+                        ? source.toAbsolutePath().getParent()
+                        : source.getParent().resolve("deleted");
+                if (deletedDir != null) {
+                    Files.createDirectories(deletedDir);
+                    String originalName = source.getFileName() == null ? "deleted-file" : source.getFileName().toString();
+                    String stampedName = appendTimestampToFileName(originalName);
+                    Files.move(source, deletedDir.resolve(stampedName), StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private String appendTimestampToFileName(String originalName) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+        int dot = originalName.lastIndexOf('.');
+        if (dot > 0) {
+            return originalName.substring(0, dot) + "-" + timestamp + originalName.substring(dot);
+        }
+        return originalName + "-" + timestamp;
     }
 }

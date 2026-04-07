@@ -363,6 +363,7 @@
         <button id="btnRrLive" class="btn btn-sm btn-outline-secondary" type="button">RR Live</button>
         <button id="btnTpView" class="btn btn-sm btn-outline-secondary" type="button">TP View</button>
         <button id="btnFileView" class="btn btn-sm btn-outline-secondary" type="button">File View</button>
+        <button id="btnReaderView" class="btn btn-sm btn-outline-secondary" type="button">Reader View</button>
         <button id="backToMenuBtn" class="btn btn-sm btn-outline-primary" type="button">Dashboard</button>
       </div>
     </div>
@@ -385,6 +386,7 @@
         <button id="syncBtn" class="btn btn-outline-secondary">SYNC</button>
         <button id="btnBibChip" class="btn btn-outline-secondary">BIB-CHIP (0)</button>
         <button id="btnTp" class="btn btn-outline-secondary">TP (0)</button>
+        <button id="btnManageTp" class="btn btn-outline-secondary d-none">Manage TP</button>
         <button id="btnScarti" class="btn btn-outline-secondary">Discarded (0)</button>
         <button id="btnBlacklist" class="btn btn-outline-secondary">Blacklist (0)</button>
         <button id="btnUnknownChips" class="btn btn-outline-secondary">Unknown chips (0)</button>
@@ -461,6 +463,45 @@
     </div>
   </div>
 
+  <div class="modal fade" id="manageTpModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Manage timing points</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label for="manageTpNameInput" class="form-label">Name</label>
+              <input id="manageTpNameInput" class="form-control" type="text" placeholder="FINISH">
+            </div>
+            <div class="col-md-6">
+              <label for="manageTpDescriptionInput" class="form-label">Description</label>
+              <input id="manageTpDescriptionInput" class="form-control" type="text" placeholder="Finish line">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+              <button id="saveManageTpBtn" type="button" class="btn btn-primary w-100">Save</button>
+            </div>
+          </div>
+          <div class="table-responsive" style="max-height: 45vh;">
+            <table class="table table-striped table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Files</th>
+                  <th style="width: 100px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="manageTpBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal fade" id="bibChipModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
       <div class="modal-content">
@@ -506,6 +547,16 @@
           <div class="mb-2">
             <label for="filePassaggiSyncInput" class="form-label">Sync offset (+/- hh:mm:ss.sss)</label>
             <input id="filePassaggiSyncInput" class="form-control" type="text" value="+00:00:00.000" placeholder="+00:00:00.000">
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label for="filePassaggiFromInput" class="form-label">From time</label>
+              <input id="filePassaggiFromInput" class="form-control" type="text" placeholder="09:10:00">
+            </div>
+            <div class="col-6">
+              <label for="filePassaggiToInput" class="form-label">To time</label>
+              <input id="filePassaggiToInput" class="form-control" type="text" placeholder="11:45:00">
+            </div>
           </div>
           <div class="mb-0">
             <label for="filePassaggiScaricaOgniInput" class="form-label">Download every (seconds)</label>
@@ -572,6 +623,16 @@
           <select id="editTpSelect" class="form-select"></select>
           <label for="editSyncInput" class="form-label mt-3">Sync offset (+/- hh:mm:ss.sss)</label>
           <input id="editSyncInput" class="form-control" type="text" value="+00:00:00.000" placeholder="+00:00:00.000">
+          <div class="row g-2 mt-1">
+            <div class="col-6">
+              <label for="editFromInput" class="form-label">From time</label>
+              <input id="editFromInput" class="form-control" type="text" placeholder="09:10:00">
+            </div>
+            <div class="col-6">
+              <label for="editToInput" class="form-label">To time</label>
+              <input id="editToInput" class="form-control" type="text" placeholder="11:45:00">
+            </div>
+          </div>
           <label for="editScaricaOgniInput" class="form-label mt-3">Download every (seconds)</label>
           <input id="editScaricaOgniInput" class="form-control" type="number" min="1" value="60">
         </div>
@@ -784,6 +845,7 @@
     const syncBtn = document.getElementById('syncBtn');
     const btnBibChip = document.getElementById('btnBibChip');
     const btnTp = document.getElementById('btnTp');
+    const btnManageTp = document.getElementById('btnManageTp');
     const btnScarti = document.getElementById('btnScarti');
     const btnBlacklist = document.getElementById('btnBlacklist');
     const btnUnknownChips = document.getElementById('btnUnknownChips');
@@ -793,12 +855,15 @@
     const btnRrLive = document.getElementById('btnRrLive');
     const btnTpView = document.getElementById('btnTpView');
     const btnFileView = document.getElementById('btnFileView');
+    const btnReaderView = document.getElementById('btnReaderView');
     const btnLivePage = document.getElementById('btnLivePage');
     const saveFilePassaggiBtn = document.getElementById('saveFilePassaggiBtn');
     const saveSimulatedFileBtn = document.getElementById('saveSimulatedFileBtn');
     const filePassaggiSourceInput = document.getElementById('filePassaggiSourceInput');
     const filePassaggiTpSelect = document.getElementById('filePassaggiTpSelect');
     const filePassaggiSyncInput = document.getElementById('filePassaggiSyncInput');
+    const filePassaggiFromInput = document.getElementById('filePassaggiFromInput');
+    const filePassaggiToInput = document.getElementById('filePassaggiToInput');
     const filePassaggiScaricaOgniInput = document.getElementById('filePassaggiScaricaOgniInput');
     const simulatedFileNameInput = document.getElementById('simulatedFileNameInput');
     const simulatedFileTpSelect = document.getElementById('simulatedFileTpSelect');
@@ -812,10 +877,16 @@
     const editTpSelect = document.getElementById('editTpSelect');
     const editSourceInput = document.getElementById('editSourceInput');
     const editSyncInput = document.getElementById('editSyncInput');
+    const editFromInput = document.getElementById('editFromInput');
+    const editToInput = document.getElementById('editToInput');
     const editScaricaOgniInput = document.getElementById('editScaricaOgniInput');
     const saveEditTpBtn = document.getElementById('saveEditTpBtn');
+    const manageTpNameInput = document.getElementById('manageTpNameInput');
+    const manageTpDescriptionInput = document.getElementById('manageTpDescriptionInput');
+    const saveManageTpBtn = document.getElementById('saveManageTpBtn');
     const detailRows = document.getElementById('detailRows');
     const tpModalBody = document.getElementById('tpModalBody');
+    const manageTpBody = document.getElementById('manageTpBody');
     const bibChipModalBody = document.getElementById('bibChipModalBody');
     const discardedModalBody = document.getElementById('discardedModalBody');
     const unknownChipsModalBody = document.getElementById('unknownChipsModalBody');
@@ -843,6 +914,7 @@
     const filePassaggiModal = new bootstrap.Modal(document.getElementById('filePassaggiModal'));
     const simulatedFileModal = new bootstrap.Modal(document.getElementById('simulatedFileModal'));
     const editTimingPointModal = new bootstrap.Modal(document.getElementById('editTimingPointModal'));
+    const manageTpModal = new bootstrap.Modal(document.getElementById('manageTpModal'));
     const discardedModal = new bootstrap.Modal(document.getElementById('discardedModal'));
     const sourceContentModal = new bootstrap.Modal(document.getElementById('sourceContentModal'));
     const unknownChipsModal = new bootstrap.Modal(document.getElementById('unknownChipsModal'));
@@ -916,6 +988,7 @@
     function applyModeVisibility() {
       const auth = getStoredAuth();
       btnOpenRr.classList.toggle('d-none', !auth || auth.mode === 'TZERO');
+      btnManageTp.classList.toggle('d-none', !auth || auth.mode !== 'TZERO');
     }
 
     function redirectToLogin() {
@@ -1132,7 +1205,7 @@
 
             if (action === 'edit') {
               try {
-                await openEditTimingPointModal(rowId, row.source, row.timingPoint, row.scaricaOgniSec, row.syncOffset);
+                await openEditTimingPointModal(rowId, row.source, row.timingPoint, row.scaricaOgniSec, row.syncOffset, row.filterFromTime, row.filterToTime);
               } catch (error) {
                 appendWsMessage(error.message);
               }
@@ -1548,6 +1621,56 @@
       return response.json();
     }
 
+    async function loadTZeroTimingPointConfig() {
+      const eventId = getEventId();
+      const response = await fetch(`/api/tzero/gare/${encodeURIComponent(eventId)}/timing-points`);
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Error loading TZero timing points');
+      }
+      return response.json();
+    }
+
+    async function saveTZeroTimingPoint() {
+      const eventId = getEventId();
+      const name = manageTpNameInput.value.trim();
+      const description = manageTpDescriptionInput.value.trim();
+      if (!name) {
+        throw new Error('Timing point name is required');
+      }
+      const response = await fetch(`/api/tzero/gare/${encodeURIComponent(eventId)}/timing-points`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description })
+      });
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Error saving TZero timing point');
+      }
+      return response.json();
+    }
+
+    async function deleteTZeroTimingPoint(name) {
+      const eventId = getEventId();
+      const response = await fetch(`/api/tzero/gare/${encodeURIComponent(eventId)}/timing-points/${encodeURIComponent(name)}`, {
+        method: 'DELETE'
+      });
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Error deleting TZero timing point');
+      }
+      return response.json();
+    }
+
     async function loadBibChip() {
       const eventId = getEventId();
       const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/bib-chip`);
@@ -1886,6 +2009,8 @@
       const source = filePassaggiSourceInput.value.trim();
       const timingPoint = filePassaggiTpSelect.value;
       const syncOffset = filePassaggiSyncInput.value.trim();
+      const filterFromTime = filePassaggiFromInput.value.trim();
+      const filterToTime = filePassaggiToInput.value.trim();
       const scaricaOgniSec = Number(filePassaggiScaricaOgniInput.value || 60);
       if (!source) {
         throw new Error('Enter URL or local file path');
@@ -1899,11 +2024,17 @@
       if (!Number.isFinite(scaricaOgniSec) || scaricaOgniSec <= 0) {
         throw new Error('"Download every" value is not valid');
       }
+      if (filterFromTime && !/^\d{2}:\d{2}:\d{2}([.,]\d{1,3})?$/.test(filterFromTime)) {
+        throw new Error('From time format must be HH:mm:ss or HH:mm:ss.SSS');
+      }
+      if (filterToTime && !/^\d{2}:\d{2}:\d{2}([.,]\d{1,3})?$/.test(filterToTime)) {
+        throw new Error('To time format must be HH:mm:ss or HH:mm:ss.SSS');
+      }
 
       const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/file-passaggi`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source, timingPoint, syncOffset, scaricaOgniSec })
+        body: JSON.stringify({ source, timingPoint, syncOffset, scaricaOgniSec, filterFromTime, filterToTime })
       });
 
       if (response.status === 401) {
@@ -2098,12 +2229,12 @@
       return response.json();
     }
 
-    async function updateRowTimingPoint(rowId, source, timingPoint, scaricaOgniSec, syncOffset) {
+    async function updateRowTimingPoint(rowId, source, timingPoint, scaricaOgniSec, syncOffset, filterFromTime, filterToTime) {
       const eventId = getEventId();
       const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowId)}/timing-point`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source, timingPoint, scaricaOgniSec, syncOffset })
+        body: JSON.stringify({ source, timingPoint, scaricaOgniSec, syncOffset, filterFromTime, filterToTime })
       });
       if (!response.ok) {
         throw new Error('Error updating timing point');
@@ -2119,6 +2250,55 @@
         tpModalBody.appendChild(tr);
       });
       tpModal.show();
+    }
+
+    function renderManageTpRows(data) {
+      manageTpBody.innerHTML = '';
+      const rows = data && Array.isArray(data.timingPoints) ? data.timingPoints : [];
+      if (rows.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="4" class="text-center text-muted py-3">No timing points configured</td>';
+        manageTpBody.appendChild(tr);
+        return;
+      }
+      rows.forEach((tp) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(tp.name || '')}</td>
+          <td>${escapeHtml(tp.description || '')}</td>
+          <td>${escapeHtml((Array.isArray(tp.sources) ? tp.sources : []).join(', '))}</td>
+          <td><button type="button" class="btn btn-sm btn-outline-danger delete-tp-btn">Delete</button></td>
+        `;
+        tr.querySelector('.delete-tp-btn').addEventListener('click', async () => {
+          const name = tp && tp.name ? tp.name : '';
+          if (!name) {
+            return;
+          }
+          if (!window.confirm(`Delete timing point "${name}"?`)) {
+            return;
+          }
+          try {
+            const updated = await deleteTZeroTimingPoint(name);
+            renderManageTpRows(updated);
+            appendWsMessage(`TZero timing point deleted: ${name}`);
+          } catch (error) {
+            appendWsMessage(error.message);
+          }
+        });
+        manageTpBody.appendChild(tr);
+      });
+    }
+
+    async function openManageTpModal() {
+      if (!isTZeroMode()) {
+        return;
+      }
+      manageTpNameInput.value = '';
+      manageTpDescriptionInput.value = '';
+      manageTpBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Loading...</td></tr>';
+      manageTpModal.show();
+      const data = await loadTZeroTimingPointConfig();
+      renderManageTpRows(data);
     }
 
     function renderBibChipModal(data) {
@@ -2158,11 +2338,13 @@
 
       filePassaggiSourceInput.value = '';
       filePassaggiSyncInput.value = '+00:00:00.000';
+      filePassaggiFromInput.value = '';
+      filePassaggiToInput.value = '';
       filePassaggiScaricaOgniInput.value = '60';
       filePassaggiModal.show();
     }
 
-    async function openEditTimingPointModal(rowId, currentSource, currentTimingPoint, currentScaricaOgniSec, currentSyncOffset) {
+    async function openEditTimingPointModal(rowId, currentSource, currentTimingPoint, currentScaricaOgniSec, currentSyncOffset, currentFilterFromTime, currentFilterToTime) {
       editTpSelect.innerHTML = '';
       if (isTZeroMode()) {
         const blankOption = document.createElement('option');
@@ -2192,6 +2374,8 @@
       }
       editSourceInput.value = currentSource || '';
       editSyncInput.value = currentSyncOffset || '+00:00:00.000';
+      editFromInput.value = currentFilterFromTime || '';
+      editToInput.value = currentFilterToTime || '';
       editScaricaOgniInput.value = (currentScaricaOgniSec && currentScaricaOgniSec > 0) ? currentScaricaOgniSec : 60;
       editingRowId = rowId;
       editTimingPointModal.show();
@@ -2270,6 +2454,14 @@
       }
     });
 
+    btnManageTp.addEventListener('click', async () => {
+      try {
+        await openManageTpModal();
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
     btnBibChip.addEventListener('click', async () => {
       try {
         const data = await loadBibChip();
@@ -2333,6 +2525,13 @@
         : '/fileView.html';
     });
 
+    btnReaderView.addEventListener('click', () => {
+      const eventId = getEventId();
+      window.location.href = eventId
+        ? `/readerView.html?eventId=${encodeURIComponent(eventId)}`
+        : '/readerView.html';
+    });
+
     btnLivePage.addEventListener('click', () => {
       window.open('https://www.icron.it/services/live/', '_blank', 'noopener,noreferrer');
     });
@@ -2390,6 +2589,8 @@
       const source = editSourceInput.value.trim();
       const scaricaOgniSec = Number(editScaricaOgniInput.value || 60);
       const syncOffset = editSyncInput.value.trim();
+      const filterFromTime = editFromInput.value.trim();
+      const filterToTime = editToInput.value.trim();
       if (!source) {
         appendWsMessage('Source is required');
         return;
@@ -2402,15 +2603,36 @@
         appendWsMessage('Sync offset format must be +/- hh:mm:ss.sss');
         return;
       }
+      if (filterFromTime && !/^\d{2}:\d{2}:\d{2}([.,]\d{1,3})?$/.test(filterFromTime)) {
+        appendWsMessage('From time format must be HH:mm:ss or HH:mm:ss.SSS');
+        return;
+      }
+      if (filterToTime && !/^\d{2}:\d{2}:\d{2}([.,]\d{1,3})?$/.test(filterToTime)) {
+        appendWsMessage('To time format must be HH:mm:ss or HH:mm:ss.SSS');
+        return;
+      }
       if (!isTZeroMode() && !editTpSelect.value) {
         appendWsMessage('Timing point is required');
         return;
       }
       try {
-        const rows = await updateRowTimingPoint(editingRowId, source, editTpSelect.value, scaricaOgniSec, syncOffset);
+        const rows = await updateRowTimingPoint(editingRowId, source, editTpSelect.value, scaricaOgniSec, syncOffset, filterFromTime, filterToTime);
         renderRows(rows);
         editTimingPointModal.hide();
         appendWsMessage('Timing point updated');
+      } catch (error) {
+        appendWsMessage(error.message);
+      }
+    });
+
+    saveManageTpBtn.addEventListener('click', async () => {
+      try {
+        const data = await saveTZeroTimingPoint();
+        renderManageTpRows(data);
+        manageTpNameInput.value = '';
+        manageTpDescriptionInput.value = '';
+        btnTp.textContent = `TP (${(data.timingPoints || []).length})`;
+        appendWsMessage('TZero timing point saved');
       } catch (error) {
         appendWsMessage(error.message);
       }

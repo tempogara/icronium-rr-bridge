@@ -1,6 +1,8 @@
 package it.icron.icronium.connector.rr.controller;
 
 import it.icron.icronium.connector.rr.integration.RRGaraDettaglioService;
+import it.icron.icronium.connector.rr.integration.RRSessionService;
+import it.icron.icronium.connector.rr.integration.SpeakerTokenService;
 import it.icron.icronium.connector.rr.model.BibChipResponse;
 import it.icron.icronium.connector.rr.model.FilePassaggiRequest;
 import it.icron.icronium.connector.rr.model.GaraDettaglioResponse;
@@ -23,15 +25,24 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Collections;
 
 @RestController
 @RequestMapping("/api/gare")
 public class GaraDettaglioController {
 
     private final RRGaraDettaglioService rrGaraDettaglioService;
+    private final RRSessionService sessionService;
+    private final SpeakerTokenService speakerTokenService;
 
-    public GaraDettaglioController(RRGaraDettaglioService rrGaraDettaglioService) {
+    public GaraDettaglioController(RRGaraDettaglioService rrGaraDettaglioService, RRSessionService sessionService, SpeakerTokenService speakerTokenService) {
         this.rrGaraDettaglioService = rrGaraDettaglioService;
+        this.sessionService = sessionService;
+        this.speakerTokenService = speakerTokenService;
     }
 
     @GetMapping("/{eventId}/dettaglio")
@@ -97,6 +108,22 @@ public class GaraDettaglioController {
             return ResponseEntity.status(HttpStatusCode.valueOf(e.getStatusCode().value())).body(e.getReason());
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Errore lettura file");
+        }
+    }
+
+    @GetMapping("/{eventId}/speaker-url/{timingPoint}")
+    public ResponseEntity<Map<String, String>> speakerUrl(@PathVariable String eventId, @PathVariable String timingPoint) {
+        try {
+            String host = resolveLanAddress();
+            String token = speakerTokenService.issueToken(eventId, timingPoint, sessionService.getMode());
+            String url = String.format(
+                    "http://%s:8087/speaker-tp.html?token=%s",
+                    host,
+                    encode(token)
+            );
+            return ResponseEntity.ok(Map.of("url", url));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 
@@ -252,5 +279,26 @@ public class GaraDettaglioController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    private String resolveLanAddress() throws Exception {
+        for (NetworkInterface networkInterface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+            if (networkInterface == null || !networkInterface.isUp() || networkInterface.isLoopback()) {
+                continue;
+            }
+            for (InetAddress address : Collections.list(networkInterface.getInetAddresses())) {
+                if (address instanceof Inet4Address inet4Address) {
+                    String hostAddress = inet4Address.getHostAddress();
+                    if (hostAddress.startsWith("192.168.")) {
+                        return hostAddress;
+                    }
+                }
+            }
+        }
+        return "localhost";
+    }
+
+    private String encode(String value) {
+        return java.net.URLEncoder.encode(value == null ? "" : value, java.nio.charset.StandardCharsets.UTF_8);
     }
 }

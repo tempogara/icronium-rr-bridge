@@ -71,6 +71,11 @@
       min-width: 248px;
       max-width: 296px;
     }
+    .totals-box-tzero {
+      grid-template-columns: repeat(3, minmax(52px, 1fr));
+      min-width: 188px;
+      max-width: 228px;
+    }
     .totals-head {
       font-size: 0.72rem;
       font-weight: 700;
@@ -152,9 +157,149 @@
       font-size: 0.78rem;
       line-height: 1.1;
     }
+    .tp-summary {
+      margin-top: 0.6rem;
+    }
+    .tp-last-passings {
+      min-width: 280px;
+    }
+    .tp-last-passings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      min-height: 148px;
+      padding: 10px 12px;
+      border: 1px solid #1b2838;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #0d1117 0%, #111827 100%);
+      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.08);
+    }
+    .tp-last-passing-item {
+      display: grid;
+      grid-template-columns: 74px minmax(0, 1fr) 76px;
+      align-items: center;
+      column-gap: 10px;
+      padding-bottom: 0.28rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+      font-size: 0.9rem;
+    }
+    .tp-last-passing-item:last-child {
+      border-bottom: 0;
+    }
+    .tp-last-passing-bib {
+      color: #f8fafc;
+      font-weight: 700;
+      font-size: 0.86rem;
+      white-space: nowrap;
+    }
+    .tp-last-passing-name {
+      font-weight: 600;
+      color: #86efac;
+      text-shadow: 0 0 8px rgba(34, 197, 94, 0.18);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tp-last-passing-time {
+      flex: 0 0 auto;
+      font-size: 0.78rem;
+      color: #fbbf24;
+      white-space: nowrap;
+      text-align: right;
+    }
+    .tp-last-passings-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .tp-speaker-btn {
+      padding: 0.12rem 0.55rem;
+      font-size: 0.76rem;
+      border-color: #0b5ed7;
+      background: #0d6efd;
+      color: #ffffff;
+    }
+    .tp-speaker-btn:hover {
+      background: #0b5ed7;
+      border-color: #0a58ca;
+      color: #ffffff;
+    }
+    .tp-qr-btn {
+      padding: 0.12rem 0.55rem;
+      font-size: 0.76rem;
+      border-color: #324256;
+      color: #cbd5e1;
+    }
+    .tp-qr-btn:hover {
+      background: #1f2937;
+      border-color: #475569;
+      color: #f8fafc;
+    }
+    .qr-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+    }
+    .qr-image {
+      width: 240px;
+      height: 240px;
+      object-fit: contain;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #ffffff;
+      padding: 10px;
+    }
+    .qr-link {
+      max-width: 100%;
+      word-break: break-all;
+      text-align: center;
+      color: #475569;
+      font-size: 0.88rem;
+    }
+    .tp-last-passings-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 148px;
+      padding: 16px;
+      border: 1px dashed #324256;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #0d1117 0%, #111827 100%);
+      color: #94a3b8;
+      font-size: 0.9rem;
+    }
+    .tp-visibility-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+    .tp-visibility-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 10px 12px;
+      border: 1px solid #dee2e6;
+      border-radius: 10px;
+      background: #f8f9fa;
+    }
+    .tp-visibility-name {
+      font-weight: 600;
+      color: #1f2327;
+    }
+    .tp-visibility-meta {
+      font-size: 0.82rem;
+      color: #6c757d;
+    }
     .minute-chart-wrap {
       width: 100%;
-      min-width: 720px;
+      min-width: 0;
+      overflow: hidden;
     }
     .minute-chart {
       display: flex;
@@ -190,6 +335,7 @@
       position: relative;
       height: 22px;
       margin-top: 4px;
+      overflow: hidden;
     }
     .minute-chart-tick {
       position: absolute;
@@ -214,14 +360,82 @@
       font-size: 0.9rem;
     }
     .source-simulated { background: #0f766e; }
-    #tpViewBody td {
-      padding-top: 1rem;
-      padding-bottom: 1rem;
-      vertical-align: middle;
+    .tp-card-col {
+      display: flex;
     }
-    #tpViewBody td:first-child {
-      font-size: 1.05rem;
-      font-weight: 700;
+    .tp-card {
+      width: 100%;
+      border: 1px solid #d9e1ea;
+      border-radius: 16px;
+      background: #ffffff;
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+    }
+    .tp-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 1rem 1rem 0.85rem;
+      border-bottom: 1px solid #edf2f7;
+    }
+    .tp-card-header.status-running {
+      background: #1f9d55;
+      border-bottom-color: #18804a;
+    }
+    .tp-card-header.status-mixed {
+      background: #f2c94c;
+      border-bottom-color: #dfb52f;
+    }
+    .tp-card-header.status-stopped {
+      background: #d64545;
+      border-bottom-color: #b33434;
+    }
+    .tp-card-title {
+      font-size: 1.08rem;
+      font-weight: 800;
+      color: #111827;
+      line-height: 1.2;
+    }
+    .tp-card-header.status-running .tp-card-title,
+    .tp-card-header.status-stopped .tp-card-title {
+      color: #ffffff;
+    }
+    .tp-card-header.status-running .tp-move-btn,
+    .tp-card-header.status-stopped .tp-move-btn {
+      border-color: rgba(255, 255, 255, 0.55);
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .tp-card-header.status-running .tp-move-btn:hover,
+    .tp-card-header.status-stopped .tp-move-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+    }
+    .tp-card-header.status-mixed .tp-move-btn {
+      border-color: rgba(17, 24, 39, 0.18);
+      color: #111827;
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .tp-card-header.status-mixed .tp-move-btn:hover {
+      background: rgba(255, 255, 255, 0.24);
+      color: #111827;
+    }
+    .tp-card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 1rem;
+    }
+    .tp-card-totals {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .tp-card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
     }
   </style>
 </head>
@@ -238,6 +452,7 @@
         </button>
         <button id="btnRrLive" class="btn btn-sm btn-outline-secondary" type="button">RR Live</button>
         <button id="btnFileView" class="btn btn-sm btn-outline-secondary" type="button">File View</button>
+        <button id="btnReaderView" class="btn btn-sm btn-outline-secondary" type="button">Reader View</button>
         <button id="btnDetailView" class="btn btn-sm btn-outline-secondary" type="button">Race Detail</button>
         <button id="backToMenuBtn" class="btn btn-sm btn-outline-primary" type="button">Dashboard</button>
       </div>
@@ -260,29 +475,12 @@
         <span id="rrIdLabel" class="rrid-label"></span>
         <button id="syncBtn" class="btn btn-outline-secondary">SYNC</button>
         <button id="refreshBtn" class="btn btn-outline-secondary">Refresh</button>
-        <label for="startTimeInput" class="mb-0 fw-semibold ms-2">Start time:</label>
-        <input id="startTimeInput" type="text" class="form-control form-control-sm" style="width: 110px;" placeholder="00:00:00">
-        <button id="resetStartTimeBtn" class="btn btn-outline-secondary btn-sm" type="button">Reset</button>
+        <button id="filterTpBtn" class="btn btn-outline-secondary btn-sm px-2" type="button">TP</button>
         <span id="groupCountBadge" class="badge text-bg-secondary ms-auto">Timing points: 0</span>
       </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-bordered table-hover mb-0 align-middle">
-            <thead class="table-light">
-              <tr>
-                <th style="width: 220px;">Timing point</th>
-                <th style="width: 1%;">Totals</th>
-                <th>Minute chart</th>
-              </tr>
-            </thead>
-            <tbody id="tpViewBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <div id="tpViewBody" class="row row-cols-1 row-cols-xl-3 row-cols-md-2 g-3"></div>
   </main>
 
   <section id="messagesPanel" class="messages-panel fixed-bottom bg-white shadow-lg">
@@ -297,6 +495,27 @@
       <div id="messagesLog" class="messages-log border rounded p-2"></div>
     </div>
   </section>
+
+  <div class="modal fade" id="tpVisibilityModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title">Visible timing points</h5>
+            <div class="small text-muted mt-1">Choose which timing points to show in TP View.</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex justify-content-end gap-2 mb-3">
+            <button id="showAllTpBtn" type="button" class="btn btn-sm btn-outline-secondary">Show all</button>
+            <button id="hideAllTpBtn" type="button" class="btn btn-sm btn-outline-secondary">Hide all</button>
+          </div>
+          <div id="tpVisibilityList" class="tp-visibility-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="modal fade" id="tpReadModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -368,6 +587,23 @@
     </div>
   </div>
 
+  <div class="modal fade" id="tpQrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Speaker QR</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="qr-box">
+            <img id="tpQrImage" class="qr-image" alt="Speaker QR">
+            <div id="tpQrLink" class="qr-link"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -375,8 +611,8 @@
     const STORAGE_KEYS = {
       auth: 'rr.auth',
       selectedGara: 'rr.selectedGara',
-      startTimePrefix: 'rr.tpview.startTime.',
-      groupOrderPrefix: 'rr.tpview.groupOrder.'
+      groupOrderPrefix: 'rr.tpview.groupOrder.',
+      hiddenGroupsPrefix: 'rr.tpview.hiddenGroups.'
     };
 
     const rrIdLabel = document.getElementById('rrIdLabel');
@@ -386,17 +622,21 @@
     const btnRrLive = document.getElementById('btnRrLive');
     const btnDetailView = document.getElementById('btnDetailView');
     const btnFileView = document.getElementById('btnFileView');
+    const btnReaderView = document.getElementById('btnReaderView');
     const backToMenuBtn = document.getElementById('backToMenuBtn');
     const syncBtn = document.getElementById('syncBtn');
     const refreshBtn = document.getElementById('refreshBtn');
-    const startTimeInput = document.getElementById('startTimeInput');
-    const resetStartTimeBtn = document.getElementById('resetStartTimeBtn');
+    const filterTpBtn = document.getElementById('filterTpBtn');
     const groupCountBadge = document.getElementById('groupCountBadge');
     const tpViewBody = document.getElementById('tpViewBody');
     const messagesPanel = document.getElementById('messagesPanel');
     const messagesLog = document.getElementById('messagesLog');
     const messagesToggleBtn = document.getElementById('messagesToggleBtn');
     const wsStatus = document.getElementById('wsStatus');
+    const tpVisibilityList = document.getElementById('tpVisibilityList');
+    const showAllTpBtn = document.getElementById('showAllTpBtn');
+    const hideAllTpBtn = document.getElementById('hideAllTpBtn');
+    const tpVisibilityModal = new bootstrap.Modal(document.getElementById('tpVisibilityModal'));
     const tpReadTitle = document.getElementById('tpReadTitle');
     const tpReadSubtitle = document.getElementById('tpReadSubtitle');
     const tpReadBody = document.getElementById('tpReadBody');
@@ -407,6 +647,9 @@
     const tpUniqueOrderBtn = document.getElementById('tpUniqueOrderBtn');
     const tpUniqueFilterInput = document.getElementById('tpUniqueFilterInput');
     const tpUniqueModal = new bootstrap.Modal(document.getElementById('tpUniqueModal'));
+    const tpQrImage = document.getElementById('tpQrImage');
+    const tpQrLink = document.getElementById('tpQrLink');
+    const tpQrModal = new bootstrap.Modal(document.getElementById('tpQrModal'));
 
     let currentRows = [];
     let keepAliveTimerId = null;
@@ -414,7 +657,7 @@
     let tpUniqueNewestFirst = true;
     let tpUniqueFilter = '';
     let minuteChartBatchSignature = '';
-    let chartStartTimeSeconds = null;
+    let hiddenTimingPoints = new Set();
 
     function getEventId() {
       const params = new URLSearchParams(window.location.search);
@@ -498,41 +741,31 @@
       eventDateText.textContent = '';
     }
 
-    function startTimeStorageKey() {
-      const eventId = getEventId() || 'default';
-      return `${STORAGE_KEYS.startTimePrefix}${eventId}`;
-    }
-
     function groupOrderStorageKey() {
       const eventId = getEventId() || 'default';
       return `${STORAGE_KEYS.groupOrderPrefix}${eventId}`;
     }
 
-    function saveStartTimeSelection(raw) {
-      const value = (raw || '').trim();
-      if (!value) {
-        localStorage.removeItem(startTimeStorageKey());
-        return;
-      }
-      localStorage.setItem(startTimeStorageKey(), value);
+    function hiddenGroupsStorageKey() {
+      const eventId = getEventId() || 'default';
+      return `${STORAGE_KEYS.hiddenGroupsPrefix}${eventId}`;
     }
 
-    function restoreStartTimeSelection() {
-      const saved = (localStorage.getItem(startTimeStorageKey()) || '').trim();
-      if (!saved) {
-        chartStartTimeSeconds = null;
-        startTimeInput.value = '';
+    function loadHiddenGroups() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(hiddenGroupsStorageKey()) || '[]');
+        hiddenTimingPoints = new Set(Array.isArray(saved) ? saved.map((value) => String(value)) : []);
+      } catch (_error) {
+        hiddenTimingPoints = new Set();
+      }
+    }
+
+    function saveHiddenGroups() {
+      if (!hiddenTimingPoints.size) {
+        localStorage.removeItem(hiddenGroupsStorageKey());
         return;
       }
-      const parsed = parseStartTimeToSeconds(saved);
-      if (!Number.isFinite(parsed)) {
-        localStorage.removeItem(startTimeStorageKey());
-        chartStartTimeSeconds = null;
-        startTimeInput.value = '';
-        return;
-      }
-      chartStartTimeSeconds = parsed;
-      startTimeInput.value = saved;
+      localStorage.setItem(hiddenGroupsStorageKey(), JSON.stringify(Array.from(hiddenTimingPoints)));
     }
 
     function saveGroupOrder(groups) {
@@ -585,6 +818,11 @@
       list.splice(targetIndex, 0, group);
       saveGroupOrder(list);
       return list;
+    }
+
+    function isGroupVisible(group) {
+      const timingPoint = group && group.timingPoint ? String(group.timingPoint) : '';
+      return !timingPoint || !hiddenTimingPoints.has(timingPoint);
     }
 
     function appendWsMessage(text) {
@@ -686,6 +924,28 @@
       return response.json();
     }
 
+    async function loadSpeakerUrl(timingPoint) {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/speaker-url/${encodeURIComponent(timingPoint)}`);
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Error building speaker URL');
+      }
+      return response.json();
+    }
+
+    function isTZeroMode() {
+      try {
+        const auth = JSON.parse(localStorage.getItem(STORAGE_KEYS.auth) || '{}');
+        return auth && auth.mode === 'TZERO';
+      } catch (_error) {
+        return false;
+      }
+    }
+
     function extractFileName(source) {
       const value = (source || '').trim();
       if (!value) {
@@ -720,6 +980,11 @@
       return parts[1].replaceAll('"', '').trim();
     }
 
+    function extractTimeOnlyFromTimestamp(timestamp) {
+      const match = String(timestamp || '').match(/(\d{2}:\d{2}:\d{2}(?:[.,]\d+)?|\d{2}:\d{2})/);
+      return match ? match[1] : String(timestamp || '').trim();
+    }
+
     function buildBibChipNameMap(data) {
       const map = new Map();
       (data && Array.isArray(data.rows) ? data.rows : []).forEach((row) => {
@@ -730,6 +995,18 @@
         const lastName = row && row.lastName ? String(row.lastName).trim() : '';
         const firstName = row && row.firstName ? String(row.firstName).trim() : '';
         map.set(chip, `${lastName} ${firstName}`.trim());
+      });
+      return map;
+    }
+
+    function buildChipBibMap(data) {
+      const map = new Map();
+      (data && Array.isArray(data.rows) ? data.rows : []).forEach((row) => {
+        const chip = row && row.chip ? String(row.chip).trim() : '';
+        const bib = row && row.bib ? String(row.bib).trim() : '';
+        if (chip && bib) {
+          map.set(chip, bib);
+        }
       });
       return map;
     }
@@ -815,45 +1092,6 @@
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
     }
 
-    function parseStartTimeToSeconds(value) {
-      const match = String(value || '').trim().match(/^(\d{2}):(\d{2}):(\d{2})$/);
-      if (!match) {
-        return null;
-      }
-      const hours = Number(match[1]);
-      const minutes = Number(match[2]);
-      const seconds = Number(match[3]);
-      if (hours > 23 || minutes > 59 || seconds > 59) {
-        return null;
-      }
-      return (hours * 3600) + (minutes * 60) + seconds;
-    }
-
-    function extractTimeOfDaySeconds(timestamp) {
-      const match = String(timestamp || '').match(/(\d{2}):(\d{2})(?::(\d{2}))?/);
-      if (!match) {
-        return null;
-      }
-      const hours = Number(match[1]);
-      const minutes = Number(match[2]);
-      const seconds = Number(match[3] || '0');
-      if (hours > 23 || minutes > 59 || seconds > 59) {
-        return null;
-      }
-      return (hours * 3600) + (minutes * 60) + seconds;
-    }
-
-    function passesChartStartTime(timestamp) {
-      if (!Number.isFinite(chartStartTimeSeconds)) {
-        return true;
-      }
-      const timeOfDaySeconds = extractTimeOfDaySeconds(timestamp);
-      if (!Number.isFinite(timeOfDaySeconds)) {
-        return false;
-      }
-      return timeOfDaySeconds >= chartStartTimeSeconds;
-    }
-
     function buildSharedTimeline(firstMinute, latestMinute) {
       const timeline = [];
       const safeFirst = firstMinute instanceof Date && !Number.isNaN(firstMinute.getTime())
@@ -916,24 +1154,69 @@
       return groups.map((group) => `${group.timingPoint}:${buildGroupSignature(group)}`).join('||');
     }
 
-    async function rebuildMinuteCharts(groups) {
+    function renderLastPassingHtml(entries) {
+      const rows = Array.isArray(entries) ? entries : [];
+      if (!rows.length) {
+        return '<div class="tp-last-passings-empty">No readings available</div>';
+      }
+      return `<div class="tp-last-passings-list">${rows.map((entry) => `
+        <div class="tp-last-passing-item">
+          <span class="tp-last-passing-bib">${escapeHtml(entry.bib || '-')}</span>
+          <span class="tp-last-passing-name" title="${escapeHtml(entry.athlete || entry.label || entry.chip || entry.line || '')}">${escapeHtml(entry.athlete || entry.label || entry.chip || entry.line || '')}</span>
+          <span class="tp-last-passing-time mono">${escapeHtml(extractTimeOnlyFromTimestamp(entry.timestamp || '').replace(/[.,]\d+$/, ''))}</span>
+        </div>
+      `).join('')}</div>`;
+    }
+
+    function collectUniqueRecentEntries(entries, limit) {
+      const sorted = (Array.isArray(entries) ? [...entries] : [])
+        .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+      const uniqueEntries = [];
+      const seen = new Set();
+      for (const entry of sorted) {
+        const key = String(entry && (entry.bib || entry.chip || entry.athlete || entry.line || '')).trim();
+        if (!key || seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
+        uniqueEntries.push(entry);
+        if (uniqueEntries.length >= limit) {
+          break;
+        }
+      }
+      return uniqueEntries.reverse();
+    }
+
+    async function rebuildTimingPointAnalytics(groups) {
       const batchSignature = buildBatchSignature(groups);
       minuteChartBatchSignature = batchSignature;
       const chartTargets = new Map();
+      const lastPassingTargets = new Map();
       groups.forEach((group) => {
-        const selector = `[data-chart-key="${CSS.escape(group.timingPoint)}"]`;
-        const container = tpViewBody.querySelector(selector);
-        if (container) {
-          container.innerHTML = '<div class="minute-chart-loading">Loading minute chart...</div>';
-          chartTargets.set(group.timingPoint, container);
+        const chartSelector = `[data-chart-key="${CSS.escape(group.timingPoint)}"]`;
+        const chartContainer = tpViewBody.querySelector(chartSelector);
+        if (chartContainer) {
+          chartContainer.innerHTML = '<div class="minute-chart-loading">Loading minute chart...</div>';
+          chartTargets.set(group.timingPoint, chartContainer);
+        }
+        const passingsSelector = `[data-last-passings-key="${CSS.escape(group.timingPoint)}"]`;
+        const passingsContainer = tpViewBody.querySelector(passingsSelector);
+        if (passingsContainer) {
+          passingsContainer.innerHTML = '<div class="tp-last-passings-empty">Loading passings...</div>';
+          lastPassingTargets.set(group.timingPoint, passingsContainer);
         }
       });
       try {
+        const bibChipData = await loadBibChip().catch(() => ({ rows: [] }));
+        const nameMap = buildBibChipNameMap(bibChipData);
+        const bibMap = buildChipBibMap(bibChipData);
         const minuteMaps = new Map();
-        let firstMinute = null;
-        let latestMinute = null;
+        const lastPassings = new Map();
         await Promise.all(groups.map(async (group) => {
           const minuteMap = new Map();
+          const recentEntries = [];
+          let firstMinute = null;
+          let latestMinute = null;
           const contents = await Promise.all((group.rows || []).map(async (row) => ({
             row,
             content: await loadRowFileContent(row.rowId).catch(() => '')
@@ -950,9 +1233,27 @@
                   return;
                 }
                 const timestamp = extractTimestampFromPassingLine(line);
-                if (!passesChartStartTime(timestamp)) {
-                  return;
-                }
+                recentEntries.push({
+                  line,
+                  chip: chip || '',
+                  timestamp,
+                  athlete: chip ? (nameMap.get(chip) || '') : '',
+                  bib: chip ? (bibMap.get(chip) || '') : '',
+                  label: (() => {
+                    if (!chip) {
+                      return line;
+                    }
+                    const bib = bibMap.get(chip) || '';
+                    const athlete = nameMap.get(chip) || '';
+                    if (bib && athlete) {
+                      return `${bib} ${athlete}`;
+                    }
+                    if (bib) {
+                      return bib;
+                    }
+                    return athlete || chip;
+                  })()
+                });
                 const minuteDate = parseTimestampToMinute(timestamp);
                 if (!minuteDate) {
                   return;
@@ -968,23 +1269,38 @@
               });
           });
           minuteMaps.set(group.timingPoint, minuteMap);
+          const timeline = buildSharedTimeline(firstMinute, latestMinute);
+          minuteMaps.set(`${group.timingPoint}::timeline`, timeline);
+          lastPassings.set(
+            group.timingPoint,
+            collectUniqueRecentEntries(recentEntries, 10)
+          );
         }));
-        const sharedTimeline = buildSharedTimeline(firstMinute, latestMinute);
         groups.forEach((group) => {
-          const container = chartTargets.get(group.timingPoint);
-          if (!container) {
-            return;
+          const chartContainer = chartTargets.get(group.timingPoint);
+          if (chartContainer) {
+            const html = buildMinuteChartHtml(
+              minuteMaps.get(group.timingPoint) || new Map(),
+              minuteMaps.get(`${group.timingPoint}::timeline`) || []
+            );
+            if ((chartContainer.getAttribute('data-chart-batch') || '') === batchSignature) {
+              chartContainer.innerHTML = html;
+            }
           }
-          const html = buildMinuteChartHtml(minuteMaps.get(group.timingPoint) || new Map(), sharedTimeline);
-          if ((container.getAttribute('data-chart-batch') || '') === batchSignature) {
-            container.innerHTML = html;
+          const lastPassingsContainer = lastPassingTargets.get(group.timingPoint);
+          if (lastPassingsContainer) {
+            lastPassingsContainer.innerHTML = renderLastPassingHtml(lastPassings.get(group.timingPoint) || []);
           }
         });
       } catch (_error) {
         groups.forEach((group) => {
-          const container = chartTargets.get(group.timingPoint);
-          if (container && (container.getAttribute('data-chart-batch') || '') === batchSignature) {
-            container.innerHTML = '<div class="minute-chart-empty">Chart not available</div>';
+          const chartContainer = chartTargets.get(group.timingPoint);
+          if (chartContainer && (chartContainer.getAttribute('data-chart-batch') || '') === batchSignature) {
+            chartContainer.innerHTML = '<div class="minute-chart-empty">Chart not available</div>';
+          }
+          const lastPassingsContainer = lastPassingTargets.get(group.timingPoint);
+          if (lastPassingsContainer) {
+            lastPassingsContainer.innerHTML = '<div class="tp-last-passings-empty">Passings not available</div>';
           }
         });
       }
@@ -995,6 +1311,7 @@
       const sent = (group.rows || []).reduce((sum, row) => sum + (Number(row && row.righePo) || 0), 0);
       const discarded = (group.rows || []).reduce((sum, row) => sum + visibleDiscardedLines(row).length, 0);
       const unique = countUniqueChips(group);
+      const hideSent = isTZeroMode();
       const readClass = read > 0 ? 'totals-value totals-green' : 'totals-value';
       let sentClass = 'totals-value totals-red';
       if (sent > 0 && sent < read) {
@@ -1004,13 +1321,13 @@
       }
       const uniqueClass = unique > 0 ? 'totals-value totals-blue' : 'totals-value';
       const discardedClass = discarded > 0 ? 'btn btn-sm btn-danger totals-button' : 'btn btn-sm btn-outline-secondary totals-button';
-      return `<div class="totals-box">
+      return `<div class="totals-box ${hideSent ? 'totals-box-tzero' : ''}">
         <span class="totals-head">READ</span>
-        <span class="totals-head">SENT</span>
+        ${hideSent ? '' : '<span class="totals-head">SENT</span>'}
         <span class="totals-head">DISC</span>
         <span class="totals-head">UNIQUE</span>
         <span class="${readClass}"><button type="button" class="totals-value-btn show-tp-read-btn">${read}</button></span>
-        <span class="${sentClass}">${sent}</span>
+        ${hideSent ? '' : `<span class="${sentClass}">${sent}</span>`}
         <button type="button" class="${discardedClass}" disabled>${discarded}</button>
         <span class="${uniqueClass}"><button type="button" class="totals-value-btn show-tp-unique-btn">${unique}</button></span>
       </div>`;
@@ -1034,32 +1351,45 @@
 
     function renderGroups(rows) {
       currentRows = Array.isArray(rows) ? [...rows] : [];
-      const groups = applyStoredGroupOrder(groupRowsByTimingPoint(currentRows));
-      saveGroupOrder(groups);
+      const allGroups = applyStoredGroupOrder(groupRowsByTimingPoint(currentRows));
+      saveGroupOrder(allGroups);
+      const groups = allGroups.filter((group) => isGroupVisible(group));
       groupCountBadge.textContent = `Timing points: ${groups.length}`;
       tpViewBody.innerHTML = '';
       if (groups.length === 0) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="3" class="text-center text-muted py-4">No timing point data</td>';
-        tpViewBody.appendChild(tr);
+        const empty = document.createElement('div');
+        empty.className = 'col-12';
+        empty.innerHTML = '<div class="card border-0 shadow-sm"><div class="card-body text-center text-muted py-4">No timing point data</div></div>';
+        tpViewBody.appendChild(empty);
         return;
       }
       groups.forEach((group, index) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>
-            <div class="tp-header">
-              <div class="fw-semibold">${escapeHtml(group.timingPoint)}</div>
+        const headerStatusClass = getTimingPointHeaderStatus(group);
+        const card = document.createElement('div');
+        card.className = 'col tp-card-col';
+        card.innerHTML = `
+          <article class="tp-card">
+            <div class="tp-card-header ${headerStatusClass}">
+              <div class="tp-card-title">${escapeHtml(group.timingPoint)}</div>
               <div class="tp-move-controls">
                 <button class="btn btn-sm btn-outline-secondary tp-move-btn move-group-btn" data-direction="up" ${index === 0 ? 'disabled' : ''} title="Move up">↑</button>
                 <button class="btn btn-sm btn-outline-secondary tp-move-btn move-group-btn" data-direction="down" ${index === groups.length - 1 ? 'disabled' : ''} title="Move down">↓</button>
               </div>
             </div>
-          </td>
-          <td>${renderTotals(group)}</td>
-          <td><div class="minute-chart-wrap" data-chart-key="${escapeHtml(group.timingPoint)}" data-chart-batch="${escapeHtml(buildBatchSignature(groups))}"><div class="minute-chart-loading">Loading minute chart...</div></div></td>
+            <div class="tp-card-body">
+              <div class="tp-last-passings" data-last-passings-key="${escapeHtml(group.timingPoint)}"><div class="tp-last-passings-empty">Loading passings...</div></div>
+              <div class="tp-card-totals">
+                <div class="tp-summary">${renderTotals(group)}</div>
+                <div class="tp-card-actions">
+                  <button type="button" class="btn btn-sm btn-outline-secondary tp-speaker-btn open-speaker-btn">Speaker</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary tp-qr-btn open-qr-btn">QR</button>
+                </div>
+              </div>
+              <div class="minute-chart-wrap" data-chart-key="${escapeHtml(group.timingPoint)}" data-chart-batch="${escapeHtml(buildBatchSignature(groups))}"><div class="minute-chart-loading">Loading minute chart...</div></div>
+            </div>
+          </article>
         `;
-        const moveButtons = tr.querySelectorAll('.move-group-btn');
+        const moveButtons = card.querySelectorAll('.move-group-btn');
         moveButtons.forEach((button) => {
           button.addEventListener('click', () => {
             const reordered = moveGroup(groups, group.timingPoint, button.dataset.direction);
@@ -1068,7 +1398,7 @@
             renderGroups(currentRows);
           });
         });
-        const readBtn = tr.querySelector('.show-tp-read-btn');
+        const readBtn = card.querySelector('.show-tp-read-btn');
         if (readBtn) {
           readBtn.addEventListener('click', async () => {
             try {
@@ -1078,7 +1408,7 @@
             }
           });
         }
-        const uniqueBtn = tr.querySelector('.show-tp-unique-btn');
+        const uniqueBtn = card.querySelector('.show-tp-unique-btn');
         if (uniqueBtn) {
           uniqueBtn.addEventListener('click', async () => {
             try {
@@ -1088,9 +1418,96 @@
             }
           });
         }
-        tpViewBody.appendChild(tr);
+        const speakerBtn = card.querySelector('.open-speaker-btn');
+        if (speakerBtn) {
+          speakerBtn.addEventListener('click', async () => {
+            try {
+              const data = await loadSpeakerUrl(group.timingPoint || '');
+              const url = data && data.url ? data.url : '';
+              if (!url) {
+                throw new Error('Speaker URL not available');
+              }
+              window.open(url, '_blank', 'noopener,noreferrer');
+            } catch (error) {
+              appendWsMessage(error.message);
+            }
+          });
+        }
+        const qrBtn = card.querySelector('.open-qr-btn');
+        if (qrBtn) {
+          qrBtn.addEventListener('click', async () => {
+            try {
+              const data = await loadSpeakerUrl(group.timingPoint || '');
+              const url = data && data.url ? data.url : '';
+              if (!url) {
+                throw new Error('Speaker URL not available');
+              }
+              tpQrLink.textContent = url;
+              tpQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`;
+              tpQrModal.show();
+            } catch (error) {
+              appendWsMessage(error.message);
+            }
+          });
+        }
+        tpViewBody.appendChild(card);
       });
-      rebuildMinuteCharts(groups);
+      rebuildTimingPointAnalytics(groups);
+    }
+
+    function getTimingPointHeaderStatus(group) {
+      const rows = group && Array.isArray(group.rows) ? group.rows : [];
+      if (!rows.length) {
+        return 'status-stopped';
+      }
+      const allRunning = rows.every((row) => String(row && row.stato ? row.stato : '').toLowerCase() === 'running' && !Boolean(row && row.errorState));
+      if (allRunning) {
+        return 'status-running';
+      }
+      const allStopped = rows.every((row) => String(row && row.stato ? row.stato : '').toLowerCase() === 'stopped');
+      if (allStopped) {
+        return 'status-stopped';
+      }
+      return 'status-mixed';
+    }
+
+    function renderTimingPointVisibilityList() {
+      tpVisibilityList.innerHTML = '';
+      const groups = applyStoredGroupOrder(groupRowsByTimingPoint(currentRows));
+      if (!groups.length) {
+        tpVisibilityList.innerHTML = '<div class="text-muted text-center py-3">No timing points available</div>';
+        return;
+      }
+      groups.forEach((group) => {
+        const timingPoint = String(group && group.timingPoint ? group.timingPoint : '');
+        const wrapper = document.createElement('label');
+        wrapper.className = 'tp-visibility-item';
+        wrapper.innerHTML = `
+          <div class="min-w-0">
+            <div class="tp-visibility-name">${escapeHtml(timingPoint || '(No timing point)')}</div>
+            <div class="tp-visibility-meta">${group.rows.length} sources</div>
+          </div>
+          <div class="form-check form-switch m-0">
+            <input class="form-check-input tp-visibility-switch" type="checkbox" ${hiddenTimingPoints.has(timingPoint) ? '' : 'checked'}>
+          </div>
+        `;
+        const toggle = wrapper.querySelector('.tp-visibility-switch');
+        toggle.addEventListener('change', () => {
+          if (toggle.checked) {
+            hiddenTimingPoints.delete(timingPoint);
+          } else {
+            hiddenTimingPoints.add(timingPoint);
+          }
+          saveHiddenGroups();
+          renderGroups(currentRows);
+        });
+        tpVisibilityList.appendChild(wrapper);
+      });
+    }
+
+    function openTimingPointVisibilityModal() {
+      renderTimingPointVisibilityList();
+      tpVisibilityModal.show();
     }
 
     async function openTimingPointReadModal(group) {
@@ -1242,34 +1659,6 @@
       renderGroups(currentRows);
     }
 
-    function applyStartTimeSelection() {
-      const raw = (startTimeInput.value || '').trim();
-      if (!raw) {
-        chartStartTimeSeconds = null;
-        saveStartTimeSelection('');
-        renderGroups(currentRows);
-        return;
-      }
-      const parsed = parseStartTimeToSeconds(raw);
-      if (!Number.isFinite(parsed)) {
-        appendWsMessage('Start time format must be HH:mm:ss');
-        return;
-      }
-      chartStartTimeSeconds = parsed;
-      startTimeInput.value = raw;
-      saveStartTimeSelection(raw);
-      renderGroups(currentRows);
-      appendWsMessage(`Chart start time set to ${raw}`);
-    }
-
-    function resetStartTimeSelection() {
-      chartStartTimeSeconds = null;
-      startTimeInput.value = '';
-      saveStartTimeSelection('');
-      renderGroups(currentRows);
-      appendWsMessage('Chart start time reset');
-    }
-
     function connectWebSocket() {
       const socket = new SockJS('/ws');
       const client = new StompJs.Client({
@@ -1332,6 +1721,13 @@
         : '/fileView.html';
     });
 
+    btnReaderView.addEventListener('click', () => {
+      const eventId = getEventId();
+      window.location.href = eventId
+        ? `/readerView.html?eventId=${encodeURIComponent(eventId)}`
+        : '/readerView.html';
+    });
+
     btnOpenRr.addEventListener('click', async () => {
       try {
         const data = await loadRrOpenUrl();
@@ -1365,18 +1761,26 @@
       }
     });
 
-    startTimeInput.addEventListener('change', () => {
-      applyStartTimeSelection();
+    filterTpBtn.addEventListener('click', () => {
+      openTimingPointVisibilityModal();
     });
 
-    startTimeInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        applyStartTimeSelection();
-      }
+    showAllTpBtn.addEventListener('click', () => {
+      hiddenTimingPoints = new Set();
+      saveHiddenGroups();
+      renderTimingPointVisibilityList();
+      renderGroups(currentRows);
     });
 
-    resetStartTimeBtn.addEventListener('click', () => {
-      resetStartTimeSelection();
+    hideAllTpBtn.addEventListener('click', () => {
+      hiddenTimingPoints = new Set(
+        applyStoredGroupOrder(groupRowsByTimingPoint(currentRows))
+          .map((group) => String(group && group.timingPoint ? group.timingPoint : ''))
+          .filter((value) => value)
+      );
+      saveHiddenGroups();
+      renderTimingPointVisibilityList();
+      renderGroups(currentRows);
     });
 
     messagesToggleBtn.addEventListener('click', () => {
@@ -1398,7 +1802,7 @@
         return;
       }
       applyModeVisibility();
-      restoreStartTimeSelection();
+      loadHiddenGroups();
       setMessagesCollapsed(localStorage.getItem('rr.tpview.messagesCollapsed') === '1');
       startKeepAlive();
       loadEventMeta();

@@ -50,6 +50,9 @@ public class PostUploader {
                 if (line.isEmpty()) {
                     continue;
                 }
+                if (!RRGaraDettaglioService.passesTimeFilter(line, row.getFilterFromTime(), row.getFilterToTime())) {
+                    continue;
+                }
 
                 String chip = RRGaraDettaglioService.extractPassingCode(line);
                 if (chip != null && row.getBlacklistedCodes() != null && row.getBlacklistedCodes().contains(chip)) {
