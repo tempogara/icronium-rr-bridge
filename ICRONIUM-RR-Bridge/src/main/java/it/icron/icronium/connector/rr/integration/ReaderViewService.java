@@ -11,6 +11,7 @@ import it.icron.icronium.connector.rr.model.ReaderConfigRequest;
 import it.icron.icronium.connector.rr.model.ReaderFileContentResponse;
 import it.icron.icronium.connector.rr.model.ReaderFileEntry;
 import it.icron.icronium.connector.rr.model.ReaderViewState;
+import it.icron.icronium.connector.rr.model.WanDiscoveryResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -40,6 +41,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -57,6 +59,7 @@ public class ReaderViewService {
     private static final DateTimeFormatter FILE_TS_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String ICRON_WAN_INDEX_URL = "https://www.icron.it/services/live/icronium.php?reader=";
     private static final String ICRON_WAN_BASE_URL = "https://www.icron.it";
+    private static final String ICRON_WAN_LIST_URL = "https://www.icron.it/services/live/";
 
     private final RRSessionService sessionService;
     private final ActiveEventService activeEventService;
@@ -96,7 +99,7 @@ public class ReaderViewService {
 
         String name = normalizeRequired(request == null ? null : request.getName(), "Reader name is required");
         String location = normalizeEnum(request == null ? null : request.getLocation(), List.of("LAN", "WAN", "FS"), "Location is not valid");
-        String tipologia = normalizeEnum(request == null ? null : request.getTipologia(), List.of("ICRON", "UBIDIUM"), "Reader type is not valid");
+        String tipologia = normalizeEnum(request == null ? null : request.getTipologia(), List.of("ICRON", "UBIDIUM", "FEIBOT"), "Reader type is not valid");
 
         ReaderConfig reader = null;
         if (readerId != null && !readerId.isBlank()) {
@@ -187,6 +190,14 @@ public class ReaderViewService {
         return discoverLanReadersInternal();
     }
 
+    public WanDiscoveryResponse discoverWanReaders(String eventId) throws Exception {
+        sessionService.requireAuthenticated();
+        activeEventService.setActiveEventId(eventId);
+        WanDiscoveryResponse response = new WanDiscoveryResponse();
+        response.setReaderNames(discoverWanReaderNames(eventId));
+        return response;
+    }
+
     public ReaderFileContentResponse loadFileContent(String eventId, String readerId, String encodedPath) throws Exception {
         sessionService.requireAuthenticated();
         activeEventService.setActiveEventId(eventId);
@@ -214,7 +225,7 @@ public class ReaderViewService {
         response.setReaderName(reader.getName());
         response.setFileName(fileEntry.getName());
         response.setFilePath(fileEntry.getPath());
-        response.setContent(readReaderFileContent(fileEntry));
+        response.setContent(readReaderFileContent(reader, fileEntry));
         return response;
     }
 
@@ -241,9 +252,9 @@ public class ReaderViewService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found in reader"));
 
         if (sessionService.isTZeroMode()) {
-            return copyReaderFileIntoTZeroDownload(eventId, fileEntry);
+            return copyReaderFileIntoTZeroDownload(eventId, reader, fileEntry);
         }
-        String sourceUrl = safe(fileEntry.getSourceUrl()).trim();
+        String sourceUrl = resolveReaderSourceUrl(reader, fileEntry);
         return sourceUrl.isBlank() ? fileEntry.getPath() : sourceUrl;
     }
 
@@ -432,8 +443,8 @@ public class ReaderViewService {
         return changed;
     }
 
-    private String readReaderFileContent(ReaderFileEntry fileEntry) throws Exception {
-        String sourceUrl = safe(fileEntry.getSourceUrl()).trim();
+    private String readReaderFileContent(ReaderConfig reader, ReaderFileEntry fileEntry) throws Exception {
+        String sourceUrl = resolveReaderSourceUrl(reader, fileEntry);
         if (!sourceUrl.isBlank()) {
             HttpRequest request = HttpRequest.newBuilder(URI.create(sourceUrl))
                     .GET()
@@ -454,7 +465,7 @@ public class ReaderViewService {
         return Files.readString(filePath);
     }
 
-    private String copyReaderFileIntoTZeroDownload(String eventId, ReaderFileEntry fileEntry) throws Exception {
+    private String copyReaderFileIntoTZeroDownload(String eventId, ReaderConfig reader, ReaderFileEntry fileEntry) throws Exception {
         String rootFolder = sessionService.getTZeroRootFolder();
         if (rootFolder == null || rootFolder.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "TZero root folder not configured");
@@ -469,7 +480,7 @@ public class ReaderViewService {
         }
         Path target = downloadDir.resolve(fileName).normalize();
 
-        String sourceUrl = safe(fileEntry.getSourceUrl()).trim();
+        String sourceUrl = resolveReaderSourceUrl(reader, fileEntry);
         if (!sourceUrl.isBlank()) {
             HttpRequest request = HttpRequest.newBuilder(URI.create(sourceUrl))
                     .GET()
@@ -492,9 +503,84 @@ public class ReaderViewService {
         return target.toString();
     }
 
+    private String resolveReaderSourceUrl(ReaderConfig reader, ReaderFileEntry fileEntry) {
+        String explicit = safe(fileEntry.getSourceUrl()).trim();
+        if (!explicit.isBlank()) {
+            return explicit;
+        }
+
+        String fileName = safe(fileEntry.getName()).trim();
+        if (fileName.isBlank()) {
+            return "";
+        }
+
+        String location = safe(reader.getLocation()).trim().toUpperCase();
+        if ("WAN".equals(location)) {
+            return ICRON_WAN_BASE_URL + "/services/live/files/" + fileName;
+        }
+        if ("LAN".equals(location)) {
+            String host = safe(reader.getName()).trim();
+            if (host.isBlank()) {
+                return "";
+            }
+            return "http://" + host + "/files/" + fileName;
+        }
+        return "";
+    }
+
     private boolean isSupportedReaderFile(String fileName) {
         String name = safe(fileName).trim().toLowerCase();
         return name.endsWith(".tags") || name.endsWith(".csv");
+    }
+
+    private List<String> discoverWanReaderNames(String eventId) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(ICRON_WAN_LIST_URL))
+                .GET()
+                .header("Accept", "text/html")
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IOException("WAN scan request failed: HTTP " + response.statusCode());
+        }
+
+        String today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+        Set<String> configuredNames = new HashSet<>();
+        ReaderViewState state = repository.findByEventId(eventId).orElse(null);
+        if (state != null && state.getReaders() != null) {
+            for (ReaderConfig reader : state.getReaders()) {
+                String configured = safe(reader.getName()).trim().toUpperCase();
+                if (!configured.isBlank()) {
+                    configuredNames.add(configured);
+                }
+            }
+        }
+
+        LinkedHashSet<String> discovered = new LinkedHashSet<>();
+        java.util.regex.Pattern rowPattern = java.util.regex.Pattern.compile("(?is)<tr>\\s*<td>([^<]*)</td>\\s*<td>([^<]*)</td>\\s*<td[^>]*>[^<]*</td>\\s*<td>.*?>([^<]+)</a>\\s*</td>\\s*</tr>");
+        java.util.regex.Matcher rowMatcher = rowPattern.matcher(response.body());
+        while (rowMatcher.find()) {
+            String date = safe(rowMatcher.group(1)).trim();
+            String fileName = safe(rowMatcher.group(3)).trim();
+            if (!today.equals(date)) {
+                continue;
+            }
+            if (!isSupportedReaderFile(fileName)) {
+                continue;
+            }
+            if (fileName.toUpperCase().contains("MERGED")) {
+                continue;
+            }
+            java.util.regex.Matcher nameMatcher = java.util.regex.Pattern.compile("(?i)^file-([A-Z0-9_]+)-.*$").matcher(fileName);
+            if (!nameMatcher.matches()) {
+                continue;
+            }
+            String readerName = safe(nameMatcher.group(1)).trim().toUpperCase();
+            if (readerName.isBlank() || configuredNames.contains(readerName)) {
+                continue;
+            }
+            discovered.add(readerName);
+        }
+        return new ArrayList<>(discovered);
     }
 
     private int autoRegisterLanReaders(ReaderViewState state) {

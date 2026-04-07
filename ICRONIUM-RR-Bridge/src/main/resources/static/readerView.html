@@ -50,6 +50,9 @@
     .file-content-box { height: 420px; overflow: auto; border: 1px solid #d7dce2; border-radius: 10px; background: #0f172a; color: #f8fafc; padding: .75rem; }
     .file-content-line { white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: .84rem; padding: .12rem 0; border-bottom: 1px solid rgba(148,163,184,.12); }
     .file-content-line:last-child { border-bottom: 0; }
+    .wan-reader-option { padding: .6rem .75rem; border: 1px solid #d7dce2; border-radius: 10px; background: #fff; cursor: pointer; }
+    .wan-reader-option:hover { border-color: #7aa2ff; background: #f8fbff; }
+    .wan-reader-option.is-selected { border-color: #0d6efd; background: #eaf2ff; }
   </style>
 </head>
 <body>
@@ -82,7 +85,8 @@
       <div class="d-flex flex-wrap align-items-center gap-2 toolbar-row">
         <span class="mb-0 fw-semibold">RR ID:</span>
         <span id="rrIdLabel" class="rrid-label"></span>
-        <button id="scanBtn" class="btn btn-outline-secondary">Scan</button>
+        <button id="scanBtn" class="btn btn-outline-secondary">Scan LAN</button><span id="scanIndicator" class="small text-muted d-none">Scanning...</span>
+        <button id="scanWanBtn" class="btn btn-outline-secondary d-none">Scan WAN</button>
         <button id="refreshBtn" class="btn btn-outline-secondary">Refresh</button>
         <button id="addReaderBtn" class="btn btn-outline-secondary">Add reader</button>
         <span id="readerCountBadge" class="badge text-bg-secondary ms-auto">Readers: 0</span>
@@ -128,6 +132,7 @@
             <select id="readerTypeSelect" class="form-select">
               <option value="ICRON">ICRON</option>
               <option value="UBIDIUM">UBIDIUM</option>
+              <option value="FEIBOT">FEIBOT</option>
             </select>
           </div>
         </div>
@@ -207,6 +212,25 @@
     </div>
   </div>
 
+  <div class="modal fade" id="wanReaderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Select WAN reader</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="wanReaderHint" class="small text-muted mb-3"></div>
+          <div id="wanReaderOptions" class="d-grid gap-2"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button id="saveWanReaderBtn" type="button" class="btn btn-primary" disabled>Add reader</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -222,7 +246,9 @@
     const btnDetailView = document.getElementById('btnDetailView');
     const backToMenuBtn = document.getElementById('backToMenuBtn');
     const scanBtn = document.getElementById('scanBtn');
+    const scanWanBtn = document.getElementById('scanWanBtn');
     const refreshBtn = document.getElementById('refreshBtn');
+    const scanIndicator = document.getElementById('scanIndicator');
     const addReaderBtn = document.getElementById('addReaderBtn');
     const readerCountBadge = document.getElementById('readerCountBadge');
     const readerCards = document.getElementById('readerCards');
@@ -247,15 +273,20 @@
     const readerFileToInput = document.getElementById('readerFileToInput');
     const readerFileEveryInput = document.getElementById('readerFileEveryInput');
     const saveReaderFileToRaceBtn = document.getElementById('saveReaderFileToRaceBtn');
+    const wanReaderHint = document.getElementById('wanReaderHint');
+    const wanReaderOptions = document.getElementById('wanReaderOptions');
+    const saveWanReaderBtn = document.getElementById('saveWanReaderBtn');
     const readerModal = new bootstrap.Modal(document.getElementById('readerModal'));
     const fileContentModal = new bootstrap.Modal(document.getElementById('fileContentModal'));
     const addReaderFileModal = new bootstrap.Modal(document.getElementById('addReaderFileModal'));
+    const wanReaderModal = new bootstrap.Modal(document.getElementById('wanReaderModal'));
 
     let currentState = { readers: [] };
     let editingReaderId = null;
     let keepAliveTimerId = null;
     let currentFileContentLines = [];
     let currentFileContext = null;
+    let selectedWanReaderName = '';
 
     function getEventId() {
       return new URLSearchParams(window.location.search).get('eventId') || '';
@@ -276,6 +307,7 @@
     function applyModeVisibility() {
       const auth = getStoredAuth();
       btnOpenRr.classList.toggle('d-none', !auth || auth.mode === 'TZERO');
+      scanWanBtn.classList.remove('d-none');
     }
 
     function redirectToLogin() {
@@ -391,6 +423,10 @@
       return fetchJson(url, { method, headers: { 'Content-Type': 'application/json' }, body });
     }
 
+    function discoverWanReaders() {
+      return fetchJson(`/api/readers/${encodeURIComponent(getEventId())}/discover-wan`);
+    }
+
     function deleteReader(readerId) {
       return fetchJson(`/api/readers/${encodeURIComponent(getEventId())}/${encodeURIComponent(readerId)}`, { method: 'DELETE' });
     }
@@ -422,6 +458,19 @@
           syncOffset: readerFileSyncInput.value.trim(),
           filterFromTime: readerFileFromInput.value.trim(),
           filterToTime: readerFileToInput.value.trim()
+        })
+      });
+    }
+
+    function saveWanReader(name) {
+      const eventId = getEventId();
+      return fetchJson(`/api/readers/${encodeURIComponent(eventId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          location: 'WAN',
+          tipologia: 'ICRON'
         })
       });
     }
@@ -578,6 +627,32 @@
       });
     }
 
+    function renderWanReaderChoices(readerNames) {
+      selectedWanReaderName = '';
+      saveWanReaderBtn.disabled = true;
+      wanReaderOptions.innerHTML = '';
+      const names = Array.isArray(readerNames) ? readerNames : [];
+      if (!names.length) {
+        wanReaderHint.textContent = 'No new active WAN readers found today.';
+        wanReaderOptions.innerHTML = '<div class="text-center text-muted py-3">Nothing to add</div>';
+        return;
+      }
+      wanReaderHint.textContent = 'Choose one active WAN reader to add to this race.';
+      names.forEach((name) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'wan-reader-option text-start';
+        btn.textContent = name;
+        btn.addEventListener('click', () => {
+          selectedWanReaderName = name;
+          saveWanReaderBtn.disabled = false;
+          Array.from(wanReaderOptions.children).forEach((node) => node.classList.remove('is-selected'));
+          btn.classList.add('is-selected');
+        });
+        wanReaderOptions.appendChild(btn);
+      });
+    }
+
     function openReaderModal(reader) {
       editingReaderId = reader && reader.readerId ? reader.readerId : null;
       readerModalTitle.textContent = editingReaderId ? 'Edit reader' : 'Add reader';
@@ -634,10 +709,29 @@
     btnRrLive.addEventListener('click', () => { window.location.href = `/rr-live.html?eventId=${encodeURIComponent(getEventId())}`; });
     scanBtn.addEventListener('click', async () => {
       try {
+        scanBtn.disabled = true;
+        scanIndicator.classList.remove('d-none');
         const data = await scanReaders();
         renderCards(data);
       } catch (error) {
         appendMessage(error.message);
+      } finally {
+        scanBtn.disabled = false;
+        scanIndicator.classList.add('d-none');
+      }
+    });
+    scanWanBtn.addEventListener('click', async () => {
+      try {
+        scanWanBtn.disabled = true;
+        wanReaderHint.textContent = 'Scanning WAN...';
+        wanReaderOptions.innerHTML = '';
+        const data = await discoverWanReaders();
+        renderWanReaderChoices(data.readerNames || []);
+        wanReaderModal.show();
+      } catch (error) {
+        appendMessage(error.message);
+      } finally {
+        scanWanBtn.disabled = false;
       }
     });
     refreshBtn.addEventListener('click', async () => {
@@ -681,6 +775,17 @@
         appendMessage(`Added to race: ${currentFileContext.fileName}`);
         addReaderFileModal.hide();
         fileContentModal.hide();
+      } catch (error) {
+        appendMessage(error.message);
+      }
+    });
+    saveWanReaderBtn.addEventListener('click', async () => {
+      if (!selectedWanReaderName) return;
+      try {
+        const data = await saveWanReader(selectedWanReaderName);
+        renderCards(data);
+        wanReaderModal.hide();
+        appendMessage(`WAN reader added: ${selectedWanReaderName}`);
       } catch (error) {
         appendMessage(error.message);
       }

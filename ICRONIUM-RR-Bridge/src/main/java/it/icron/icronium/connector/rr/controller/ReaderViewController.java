@@ -6,6 +6,7 @@ import it.icron.icronium.connector.rr.model.ReaderFileContentResponse;
 import it.icron.icronium.connector.rr.model.ReaderToRaceRequest;
 import it.icron.icronium.connector.rr.model.ReaderViewState;
 import it.icron.icronium.connector.rr.model.LanDiscoveryResponse;
+import it.icron.icronium.connector.rr.model.WanDiscoveryResponse;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -54,6 +55,17 @@ public class ReaderViewController {
     public ResponseEntity<LanDiscoveryResponse> discoverLan(@PathVariable String eventId) {
         try {
             return ResponseEntity.ok(readerViewService.discoverLanReaders(eventId));
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            return ResponseEntity.status(HttpStatusCode.valueOf(e.getStatusCode().value())).build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/{eventId}/discover-wan")
+    public ResponseEntity<WanDiscoveryResponse> discoverWan(@PathVariable String eventId) {
+        try {
+            return ResponseEntity.ok(readerViewService.discoverWanReaders(eventId));
         } catch (org.springframework.web.server.ResponseStatusException e) {
             return ResponseEntity.status(HttpStatusCode.valueOf(e.getStatusCode().value())).build();
         } catch (Exception e) {
