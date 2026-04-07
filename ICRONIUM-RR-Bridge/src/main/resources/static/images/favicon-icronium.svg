@@ -1,23 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <title>Icronium</title>
-  <g fill="none" stroke="#111111" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="10" y="10" width="44" height="44" rx="14"/>
-    <path d="M32 32 L32 21"/>
-    <path d="M32 32 L40 37"/>
-  </g>
-  <g fill="#111111">
-    <circle cx="32" cy="8.5" r="1.9"/>
-    <circle cx="43.75" cy="11.65" r="1.9"/>
-    <circle cx="52.35" cy="20.25" r="1.9"/>
-    <circle cx="55.5" cy="32" r="1.9"/>
-    <circle cx="52.35" cy="43.75" r="1.9"/>
-    <circle cx="43.75" cy="52.35" r="1.9"/>
-    <circle cx="32" cy="55.5" r="1.9"/>
-    <circle cx="20.25" cy="52.35" r="1.9"/>
-    <circle cx="11.65" cy="43.75" r="1.9"/>
-    <circle cx="8.5" cy="32" r="1.9"/>
-    <circle cx="11.65" cy="20.25" r="1.9"/>
-    <circle cx="20.25" cy="11.65" r="1.9"/>
-    <circle cx="32" cy="32" r="2.3"/>
-  </g>
+  <title>ICRONIUM Bridge</title>
+  <defs>
+    <linearGradient id="screenGlow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9effc8"/>
+      <stop offset="100%" stop-color="#24d46b"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="6" y="8" width="52" height="38" rx="8" fill="#10161d" stroke="#263240" stroke-width="3"/>
+  <rect x="11" y="13" width="42" height="28" rx="4" fill="#04110a" stroke="#0c3b22" stroke-width="1.6"/>
+
+  <rect x="17" y="29" width="5" height="8" rx="1.4" fill="url(#screenGlow)"/>
+  <rect x="25" y="24" width="5" height="13" rx="1.4" fill="url(#screenGlow)"/>
+  <rect x="33" y="18" width="5" height="19" rx="1.4" fill="url(#screenGlow)"/>
+  <rect x="41" y="22" width="5" height="15" rx="1.4" fill="url(#screenGlow)"/>
+
+  <path d="M16 20 H29" stroke="#1bb35a" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>
+  <path d="M16 24 H24" stroke="#1bb35a" stroke-width="1.8" stroke-linecap="round" opacity="0.5"/>
+
+  <circle cx="49" cy="18" r="2.2" fill="#eab308"/>
+
+  <rect x="24" y="48" width="16" height="4" rx="2" fill="#263240"/>
+  <rect x="18" y="53" width="28" height="4" rx="2" fill="#1a2430"/>
 </svg>

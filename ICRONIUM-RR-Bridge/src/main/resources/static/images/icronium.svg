@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1062 156">
+  <title>ICRONIUM</title>
+  <defs>
+    <linearGradient id="monitorBars" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#96ffc0"/>
+      <stop offset="100%" stop-color="#23c562"/>
+    </linearGradient>
+  </defs>
+
+  <g fill="none" stroke="#111111" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 24 V132"/>
+
+    <path d="M60 48 Q60 28 80 28 H138"/>
+    <path d="M60 48 V108 Q60 128 80 128 H138"/>
+
+    <path d="M186 128 V48 Q186 28 206 28 H266 Q286 28 286 48 V72 Q286 92 266 92 H220"/>
+    <path d="M220 92 H266 Q286 92 286 112 V128"/>
+
+    <path d="M508 28 V128"/>
+    <path d="M508 28 L602 128"/>
+    <path d="M602 28 V128"/>
+
+    <path d="M646 24 V132"/>
+
+    <path d="M688 28 V108 Q688 128 708 128 H770 Q790 128 790 108 V28"/>
+
+    <path d="M828 128 V28"/>
+    <path d="M828 28 L892 96"/>
+    <path d="M956 28 V128"/>
+    <path d="M892 96 L956 28"/>
+  </g>
+
+  <g transform="translate(344 20)">
+    <rect x="0" y="0" width="126" height="108" rx="20" fill="none" stroke="#111111" stroke-width="7"/>
+    <rect x="15" y="15" width="96" height="68" rx="8" fill="#08120b" stroke="#173822" stroke-width="2.4"/>
+    <rect x="28" y="52" width="12" height="18" rx="2.5" fill="url(#monitorBars)"/>
+    <rect x="47" y="40" width="12" height="30" rx="2.5" fill="url(#monitorBars)"/>
+    <rect x="66" y="26" width="12" height="44" rx="2.5" fill="url(#monitorBars)"/>
+    <rect x="85" y="34" width="12" height="36" rx="2.5" fill="url(#monitorBars)"/>
+    <circle cx="96" cy="23" r="4.6" fill="#eab308"/>
+    <path d="M48 92 H78" stroke="#111111" stroke-width="7" stroke-linecap="round"/>
+    <path d="M34 104 H92" stroke="#111111" stroke-width="7" stroke-linecap="round"/>
+  </g>
+</svg>
