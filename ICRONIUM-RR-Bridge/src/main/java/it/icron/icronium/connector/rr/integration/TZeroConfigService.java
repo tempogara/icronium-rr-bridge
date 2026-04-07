@@ -14,6 +14,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -23,6 +26,7 @@ import java.util.Objects;
 
 @Service
 public class TZeroConfigService {
+    private static final DateTimeFormatter FOLDER_MODIFIED_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final ObjectMapper objectMapper;
     private final Path configFile = Paths.get("data", "tzero", "config.json");
@@ -83,16 +87,30 @@ public class TZeroConfigService {
             try (var stream = Files.list(rootPath)) {
                 stream
                         .filter(Files::isDirectory)
-                        .sorted(Comparator.comparing(path -> path.getFileName().toString().toLowerCase()))
+                        .sorted(Comparator.comparing(this::safeLastModifiedTime).reversed())
                         .forEach(path -> {
                             String folderName = path.getFileName().toString();
-                            result.add(new Gara(folderName, folderName, "-"));
+                            result.add(new Gara(folderName, folderName, formatLastModified(path)));
                         });
             }
             return result;
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Impossibile leggere le cartelle TZero");
         }
+    }
+
+    private FileTime safeLastModifiedTime(Path path) {
+        try {
+            return Files.getLastModifiedTime(path);
+        } catch (IOException e) {
+            return FileTime.fromMillis(0L);
+        }
+    }
+
+    private String formatLastModified(Path path) {
+        return FOLDER_MODIFIED_FORMATTER.format(
+                safeLastModifiedTime(path).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
+        );
     }
 
     public Path getEventFolder(String rootFolder, String eventId) {

@@ -55,7 +55,7 @@
 
         <div class="table-responsive">
           <table class="table table-hover align-middle">
-            <thead>
+            <thead id="gareHead">
               <tr>
                 <th scope="col">ID</th>
                 <th scope="col">EventName</th>
@@ -92,6 +92,7 @@
     };
 
     const gareBody = document.getElementById('gareBody');
+    const gareHead = document.getElementById('gareHead');
     const selectionInfo = document.getElementById('selectionInfo');
     const userBadge = document.getElementById('userBadge');
     const changeTzeroRootBtn = document.getElementById('changeTzeroRootBtn');
@@ -208,15 +209,34 @@
       const auth = readAuthSession();
       const isTZeroMode = auth && auth.mode === 'TZERO';
 
+      gareHead.innerHTML = isTZeroMode
+        ? `<tr>
+            <th scope="col">Folder</th>
+            <th scope="col">Last modified</th>
+            <th scope="col" class="text-end">Azione</th>
+          </tr>`
+        : `<tr>
+            <th scope="col">ID</th>
+            <th scope="col">EventName</th>
+            <th scope="col">EventDate</th>
+            <th scope="col" class="text-end">Azione</th>
+          </tr>`;
+
       gare.forEach((gara) => {
         const row = document.createElement('tr');
         row.dataset.garaId = gara.id;
-        row.innerHTML = `
-          <td>${gara.id}</td>
-          <td>${gara.eventName}</td>
-          <td>${gara.eventDate}</td>
-          <td class="text-end"><button class="btn btn-sm btn-primary" type="button">${isTZeroMode ? 'Select' : 'Seleziona'}</button></td>
-        `;
+        row.innerHTML = isTZeroMode
+          ? `
+            <td>${gara.eventName}</td>
+            <td>${gara.eventDate}</td>
+            <td class="text-end"><button class="btn btn-sm btn-primary" type="button">Select</button></td>
+          `
+          : `
+            <td>${gara.id}</td>
+            <td>${gara.eventName}</td>
+            <td>${gara.eventDate}</td>
+            <td class="text-end"><button class="btn btn-sm btn-primary" type="button">Seleziona</button></td>
+          `;
 
         row.addEventListener('click', () => selectGara(gara, row));
         row.querySelector('button').addEventListener('click', (event) => {

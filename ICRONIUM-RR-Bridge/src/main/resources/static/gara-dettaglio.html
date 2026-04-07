@@ -393,7 +393,7 @@
 
     <div class="toolbar-box mb-3">
       <div class="d-flex flex-wrap align-items-center gap-2 toolbar-row">
-        <span class="mb-0 fw-semibold">RR ID:</span>
+        <span class="mb-0 fw-semibold">ID:</span>
         <span id="rrIdLabel" class="rrid-label"></span>
         <button id="syncBtn" class="btn btn-outline-secondary">SYNC</button>
         <button id="btnBibChip" class="btn btn-outline-secondary">BIB-CHIP (0)</button>
@@ -734,6 +734,7 @@
                   <th style="width: 80px;">#</th>
                   <th>Chip</th>
                   <th style="width: 120px;">Count</th>
+                  <th style="width: 120px;">Actions</th>
                 </tr>
               </thead>
               <tbody id="unknownChipsModalBody"></tbody>
@@ -1561,12 +1562,32 @@
       const chips = collectUnknownChips(rows);
       if (chips.length === 0) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="3" class="text-center text-muted py-3">No unknown chips</td>';
+        tr.innerHTML = '<td colspan="4" class="text-center text-muted py-3">No unknown chips</td>';
         unknownChipsModalBody.appendChild(tr);
       } else {
         chips.forEach((entry, index) => {
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${index + 1}</td><td>${entry.chip}</td><td>${entry.count}</td>`;
+          tr.innerHTML = `<td>${index + 1}</td><td>${escapeHtml(entry.chip)}</td><td>${entry.count}</td><td><button type="button" class="btn btn-sm btn-outline-danger unknown-blacklist-btn" data-code="${escapeHtml(entry.chip)}">Black list</button></td>`;
+          const blacklistBtn = tr.querySelector('.unknown-blacklist-btn');
+          if (blacklistBtn) {
+            blacklistBtn.addEventListener('click', async () => {
+              const code = blacklistBtn.getAttribute('data-code') || '';
+              const ownerRow = currentRows.find((row) => collectUnknownChips([row]).some((item) => item.chip === code));
+              if (!ownerRow || !ownerRow.rowId || !code) {
+                appendWsMessage(`Unable to determine row for unknown chip ${code}`);
+                return;
+              }
+              try {
+                const rowsAfterBlacklist = await blacklistCode(ownerRow.rowId, code);
+                currentRows = Array.isArray(rowsAfterBlacklist) ? [...rowsAfterBlacklist] : currentRows;
+                renderRows(currentRows);
+                openUnknownChipsModal(currentRows);
+                appendWsMessage(`Code blacklisted: ${code}`);
+              } catch (error) {
+                appendWsMessage(error.message);
+              }
+            });
+          }
           unknownChipsModalBody.appendChild(tr);
         });
       }
