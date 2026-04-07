@@ -77,18 +77,16 @@
     }
     .totals-box {
       display: grid;
-      grid-template-columns: repeat(4, minmax(52px, 1fr));
-      gap: 4px;
-      min-width: 248px;
-      max-width: 296px;
+      grid-template-columns: repeat(4, minmax(38px, auto));
+      gap: 3px;
+      min-width: 168px;
     }
     .totals-box.tzero {
-      grid-template-columns: repeat(3, minmax(52px, 1fr));
-      min-width: 186px;
-      max-width: 222px;
+      grid-template-columns: repeat(3, minmax(38px, auto));
+      min-width: 126px;
     }
     .totals-head {
-      font-size: 0.72rem;
+      font-size: 0.62rem;
       font-weight: 700;
       color: #6c757d;
       text-align: center;
@@ -99,14 +97,14 @@
       border: 1px solid #d6dae0;
       border-radius: 4px;
       background: #f8f9fb;
-      padding: 7px 8px;
+      padding: 3px 6px;
       text-align: center;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 0.92rem;
+      font-size: 0.78rem;
       font-weight: 700;
       color: #212529;
       min-width: 0;
-      line-height: 1.2;
+      line-height: 1.1;
     }
     .totals-value-btn {
       width: 100%;
@@ -122,11 +120,11 @@
     }
     .totals-button {
       width: 100%;
-      padding: 7px 8px;
-      font-size: 0.92rem;
+      padding: 3px 6px;
+      font-size: 0.78rem;
       font-weight: 700;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      line-height: 1.2;
+      line-height: 1.1;
     }
     .totals-green {
       background: #1f9d55;
@@ -570,6 +568,34 @@
     </div>
   </div>
 
+  <div class="modal fade" id="discardedModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title">Discarded lines</h5>
+            <div class="small text-muted mt-1">Lines discarded for the selected file.</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="table-responsive" style="max-height: 65vh;">
+            <table class="table table-striped table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 80px;">#</th>
+                  <th>Line</th>
+                  <th style="width: 140px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="discardedModalBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal fade" id="fileVisibilityModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
@@ -638,6 +664,8 @@
     const cycleDetailsSubtitle = document.getElementById('cycleDetailsSubtitle');
     const cycleDetailsBody = document.getElementById('cycleDetailsBody');
     const cycleDetailsModal = new bootstrap.Modal(document.getElementById('cycleDetailsModal'));
+    const discardedModalBody = document.getElementById('discardedModalBody');
+    const discardedModal = new bootstrap.Modal(document.getElementById('discardedModal'));
     const fileVisibilityList = document.getElementById('fileVisibilityList');
     const showAllFilesBtn = document.getElementById('showAllFilesBtn');
     const hideAllFilesBtn = document.getElementById('hideAllFilesBtn');
@@ -979,6 +1007,23 @@
       return response.json();
     }
 
+    async function blacklistCode(rowId, code) {
+      const eventId = getEventId();
+      const response = await fetch(`/api/gare/${encodeURIComponent(eventId)}/rows/${encodeURIComponent(rowId)}/blacklist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(code)
+      });
+      if (response.status === 401) {
+        redirectToLogin();
+        throw new Error('Session expired');
+      }
+      if (!response.ok) {
+        throw new Error('Error adding code to blacklist');
+      }
+      return response.json();
+    }
+
     function extractFileName(source) {
       const value = (source || '').trim();
       if (!value) {
@@ -1037,6 +1082,19 @@
         const chip = extractChipFromPassingLine(line);
         return !chip || !blacklisted.has(chip);
       });
+    }
+
+    function extractChipFromDiscardedLine(line) {
+      const raw = (line || '').trim();
+      if (!raw || raw.includes('*')) {
+        return null;
+      }
+      const separator = raw.includes('\t') ? '\t' : ';';
+      const chip = raw.split(separator)[0].replaceAll('"', '').trim();
+      if (!chip || chip.includes('*')) {
+        return null;
+      }
+      return chip;
     }
 
     function detectSourceType(source) {
@@ -1330,7 +1388,7 @@
       const read = Number(row && row.righeFile) || 0;
       const sent = Number(row && row.righePo) || 0;
       const discarded = visibleDiscardedLines(row).length;
-      const unique = countUniqueChips(row);
+      const unique = Number.isFinite(Number(row && row.uniqueCount)) ? Number(row.uniqueCount) : 0;
       const tzero = isTZeroSession();
       const readClass = read > 0 ? 'totals-value totals-green' : 'totals-value';
       let sentClass = 'totals-value totals-red';
@@ -1340,14 +1398,18 @@
         sentClass = 'totals-value totals-green';
       }
       const uniqueClass = unique > 0 ? 'totals-value totals-blue' : 'totals-value';
-      const discardedClass = discarded > 0 ? 'btn btn-sm btn-danger totals-button' : 'btn btn-sm btn-outline-secondary totals-button';
+      const discardedClass = read > 0 && (discarded / read) > 0.10
+        ? 'btn btn-sm btn-danger totals-button show-discarded-btn'
+        : (discarded > 0
+          ? 'btn btn-sm btn-danger totals-button show-discarded-btn'
+          : 'btn btn-sm btn-outline-secondary totals-button show-discarded-btn');
       const totalsHtml = tzero
         ? `<div class="totals-box tzero">
         <span class="totals-head">READ</span>
         <span class="totals-head">DISC</span>
         <span class="totals-head">UNIQUE</span>
         <span class="${readClass}"><button type="button" class="totals-value-btn show-tp-read-btn">${read}</button></span>
-        <button type="button" class="${discardedClass}" disabled>${discarded}</button>
+        <button type="button" class="${discardedClass}" title="Discarded">${discarded}</button>
         <span class="${uniqueClass}"><button type="button" class="totals-value-btn show-tp-unique-btn">${unique}</button></span>
       </div>`
         : `<div class="totals-box">
@@ -1357,7 +1419,7 @@
         <span class="totals-head">UNIQUE</span>
         <span class="${readClass}"><button type="button" class="totals-value-btn show-tp-read-btn">${read}</button></span>
         <span class="${sentClass}">${sent}</span>
-        <button type="button" class="${discardedClass}" disabled>${discarded}</button>
+        <button type="button" class="${discardedClass}" title="Discarded">${discarded}</button>
         <span class="${uniqueClass}"><button type="button" class="totals-value-btn show-tp-unique-btn">${unique}</button></span>
       </div>`;
       return totalsHtml;
@@ -1412,18 +1474,45 @@
       return `<div class="minute-chart-wrap" data-chart-key="${escapeHtml(row.rowId)}" data-chart-batch="${escapeHtml(batchSignature)}"><div class="minute-chart-loading">Loading minute chart...</div></div>`;
     }
 
-    function countUniqueChips(row) {
-      const unique = new Set();
-      const details = Array.isArray(row && row.downloadCycleDetails) ? row.downloadCycleDetails : [];
-      details.forEach((cycleLines) => {
-        (Array.isArray(cycleLines) ? cycleLines : []).forEach((line) => {
-          const chip = extractChipFromPassingLine(line);
-          if (chip) {
-            unique.add(chip);
+    function openDiscardedModal(row) {
+      discardedModalBody.innerHTML = '';
+      const discardedLines = visibleDiscardedLines(row);
+      const rowId = row && row.rowId ? row.rowId : '';
+      if (discardedLines.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="3" class="text-center text-muted py-3">No discarded lines</td>';
+        discardedModalBody.appendChild(tr);
+      } else {
+        discardedLines.forEach((line, index) => {
+          const chip = extractChipFromDiscardedLine(line);
+          const actionCell = rowId && chip
+            ? `<button type="button" class="btn btn-sm btn-outline-danger discarded-blacklist-btn" data-code="${escapeHtml(chip)}">Black list</button>`
+            : '';
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${index + 1}</td><td>${escapeHtml(line || '')}</td><td>${actionCell}</td>`;
+          const blacklistBtn = tr.querySelector('.discarded-blacklist-btn');
+          if (blacklistBtn) {
+            blacklistBtn.addEventListener('click', async () => {
+              const code = blacklistBtn.getAttribute('data-code') || '';
+              if (!rowId || !code) {
+                return;
+              }
+              try {
+                const rowsAfterBlacklist = await blacklistCode(rowId, code);
+                currentRows = Array.isArray(rowsAfterBlacklist) ? [...rowsAfterBlacklist] : currentRows;
+                const updatedRow = currentRows.find((currentRow) => currentRow.rowId === rowId);
+                renderGroups(currentRows);
+                openDiscardedModal(updatedRow || { rowId, discardedLines: [] });
+                appendWsMessage(`Code blacklisted: ${code}`);
+              } catch (error) {
+                appendWsMessage(error.message);
+              }
+            });
           }
+          discardedModalBody.appendChild(tr);
         });
-      });
-      return unique.size;
+      }
+      discardedModal.show();
     }
 
     async function openCycleDetailsModal(row, kind, cycleIndex) {
@@ -1523,6 +1612,12 @@
           } catch (error) {
             appendWsMessage(error.message);
           }
+        });
+      }
+      const discardedBtn = tr.querySelector('.show-discarded-btn');
+      if (discardedBtn) {
+        discardedBtn.addEventListener('click', () => {
+          openDiscardedModal(row);
         });
       }
       tr.querySelectorAll('.show-cycle-detail-btn').forEach((btn) => {
