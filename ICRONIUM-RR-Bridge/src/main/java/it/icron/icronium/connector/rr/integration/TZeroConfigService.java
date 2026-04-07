@@ -3,6 +3,8 @@ package it.icron.icronium.connector.rr.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.icron.icronium.connector.rr.model.Gara;
+import it.icron.icronium.connector.rr.model.GaraDettaglioRow;
+import it.icron.icronium.connector.rr.model.TZeroSourceConfig;
 import it.icron.icronium.connector.rr.model.TZeroTimingPoint;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -203,6 +205,72 @@ public class TZeroConfigService {
         return result;
     }
 
+    public synchronized List<TZeroSourceConfig> loadSourceConfigs(String rootFolder, String eventId) {
+        Path configPath = getSourcesConfigPath(rootFolder, eventId);
+        if (!Files.exists(configPath)) {
+            return new ArrayList<>();
+        }
+        try {
+            JsonNode root = objectMapper.readTree(configPath.toFile());
+            JsonNode sourcesNode = root == null ? null : root.get("sources");
+            List<TZeroSourceConfig> result = new ArrayList<>();
+            if (sourcesNode != null && sourcesNode.isArray()) {
+                for (JsonNode node : sourcesNode) {
+                    String source = textValue(node.get("source")).trim();
+                    if (source.isBlank()) {
+                        continue;
+                    }
+                    TZeroSourceConfig cfg = new TZeroSourceConfig();
+                    cfg.setSource(source);
+                    cfg.setTimingPoint(textValue(node.get("timingPoint")).trim());
+                    cfg.setScaricaOgniSec(node.hasNonNull("scaricaOgniSec") ? node.get("scaricaOgniSec").asInt(10) : 10);
+                    cfg.setSyncOffset(textValue(node.get("syncOffset")).trim());
+                    cfg.setFilterFromTime(textValue(node.get("filterFromTime")).trim());
+                    cfg.setFilterToTime(textValue(node.get("filterToTime")).trim());
+                    cfg.setSourceKind(textValue(node.get("sourceKind")).trim());
+                    result.add(cfg);
+                }
+            }
+            return result;
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Impossibile leggere sources.json");
+        }
+    }
+
+    public synchronized void upsertSourceConfig(String rootFolder, String eventId, GaraDettaglioRow row) {
+        if (row == null || row.getSource() == null || row.getSource().isBlank()) {
+            return;
+        }
+        List<TZeroSourceConfig> configs = loadSourceConfigs(rootFolder, eventId);
+        String normalizedSource = normalizeSourceKey(row.getSource());
+        TZeroSourceConfig target = configs.stream()
+                .filter(cfg -> normalizedSource.equalsIgnoreCase(normalizeSourceKey(cfg.getSource())))
+                .findFirst()
+                .orElse(null);
+        if (target == null) {
+            target = new TZeroSourceConfig();
+            configs.add(target);
+        }
+        target.setSource(row.getSource().trim());
+        target.setTimingPoint(row.getTimingPoint() == null ? "" : row.getTimingPoint().trim());
+        target.setScaricaOgniSec(row.getScaricaOgniSec());
+        target.setSyncOffset(row.getSyncOffset() == null ? "" : row.getSyncOffset().trim());
+        target.setFilterFromTime(row.getFilterFromTime() == null ? "" : row.getFilterFromTime().trim());
+        target.setFilterToTime(row.getFilterToTime() == null ? "" : row.getFilterToTime().trim());
+        target.setSourceKind(row.getSourceKind() == null ? "" : row.getSourceKind().trim());
+        saveSourceConfigs(rootFolder, eventId, configs);
+    }
+
+    public synchronized void removeSourceConfig(String rootFolder, String eventId, String source) {
+        String normalizedSource = normalizeSourceKey(source);
+        if (normalizedSource.isBlank()) {
+            return;
+        }
+        List<TZeroSourceConfig> configs = loadSourceConfigs(rootFolder, eventId);
+        configs.removeIf(cfg -> normalizedSource.equalsIgnoreCase(normalizeSourceKey(cfg.getSource())));
+        saveSourceConfigs(rootFolder, eventId, configs);
+    }
+
     private void saveTimingPoints(String rootFolder, String eventId, List<TZeroTimingPoint> timingPoints) {
         Path configPath = getTimingPointsConfigPath(rootFolder, eventId);
         try {
@@ -225,9 +293,39 @@ public class TZeroConfigService {
         }
     }
 
+    private void saveSourceConfigs(String rootFolder, String eventId, List<TZeroSourceConfig> configs) {
+        Path configPath = getSourcesConfigPath(rootFolder, eventId);
+        try {
+            Files.createDirectories(configPath.getParent());
+            List<Map<String, Object>> serialized = configs.stream()
+                    .filter(Objects::nonNull)
+                    .filter(cfg -> cfg.getSource() != null && !cfg.getSource().isBlank())
+                    .map(cfg -> {
+                        Map<String, Object> row = new LinkedHashMap<>();
+                        row.put("source", cfg.getSource().trim());
+                        row.put("timingPoint", cfg.getTimingPoint() == null ? "" : cfg.getTimingPoint().trim());
+                        row.put("scaricaOgniSec", cfg.getScaricaOgniSec() == null ? 10 : cfg.getScaricaOgniSec());
+                        row.put("syncOffset", cfg.getSyncOffset() == null ? "" : cfg.getSyncOffset().trim());
+                        row.put("filterFromTime", cfg.getFilterFromTime() == null ? "" : cfg.getFilterFromTime().trim());
+                        row.put("filterToTime", cfg.getFilterToTime() == null ? "" : cfg.getFilterToTime().trim());
+                        row.put("sourceKind", cfg.getSourceKind() == null ? "" : cfg.getSourceKind().trim());
+                        return row;
+                    })
+                    .toList();
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(configPath.toFile(), Map.of("sources", serialized));
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Impossibile salvare sources.json");
+        }
+    }
+
     private Path getTimingPointsConfigPath(String rootFolder, String eventId) {
         Path eventFolder = getEventFolder(rootFolder, eventId);
         return eventFolder.resolve("config").resolve("timingpoints.json").normalize();
+    }
+
+    private Path getSourcesConfigPath(String rootFolder, String eventId) {
+        Path eventFolder = getEventFolder(rootFolder, eventId);
+        return eventFolder.resolve("config").resolve("sources.json").normalize();
     }
 
     private String normalizeTimingPointName(String value) {
@@ -251,6 +349,10 @@ public class TZeroConfigService {
             normalized = normalized.substring(slash + 1);
         }
         return normalized.trim();
+    }
+
+    private String normalizeSourceKey(String value) {
+        return value == null ? "" : value.trim();
     }
 
     private String textValue(JsonNode node) {

@@ -5,129 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ICRONIUM RR Bridge - Manuale Utente</title>
   <style>
-    :root {
-      --bg: #f6f3ee;
-      --card: #ffffff;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --line: #e5ded3;
-      --brand: #1f6feb;
-      --accent: #9f1239;
-      --shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
-      color: var(--text);
-      background: linear-gradient(180deg, #f4efe7 0%, #fbfaf8 100%);
-      line-height: 1.55;
-    }
-    .shell {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 32px 20px 64px;
-    }
-    .hero {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #9f1239 100%);
-      color: #fff;
-      border-radius: 24px;
-      padding: 32px;
-      box-shadow: var(--shadow);
-      margin-bottom: 24px;
-    }
+    body { margin: 0; font-family: "Avenir Next", "Segoe UI", sans-serif; color: #1f2937; background: linear-gradient(180deg, #f4efe7 0%, #fbfaf8 100%); line-height: 1.55; }
+    .shell { max-width: 1100px; margin: 0 auto; padding: 32px 20px 64px; }
+    .hero { background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #9f1239 100%); color: #fff; border-radius: 24px; padding: 32px; margin-bottom: 24px; }
     .hero h1 { margin: 0 0 8px; font-size: 2.4rem; }
     .hero p { margin: 0; color: rgba(255,255,255,0.85); }
-    .toplinks {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 18px;
-    }
-    .toplinks a {
-      color: #fff;
-      text-decoration: none;
-      padding: 10px 14px;
-      border: 1px solid rgba(255,255,255,0.22);
-      border-radius: 999px;
-      background: rgba(255,255,255,0.08);
-    }
-    .layout {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 24px;
-      align-items: start;
-    }
-    .toc, .content {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      box-shadow: var(--shadow);
-    }
-    .toc {
-      position: sticky;
-      top: 20px;
-      padding: 22px 18px;
-    }
-    .toc h2 {
-      margin: 0 0 14px;
-      font-size: 1rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .toc a {
-      display: block;
-      color: var(--text);
-      text-decoration: none;
-      padding: 8px 10px;
-      border-radius: 10px;
-      margin-bottom: 4px;
-    }
+    .toplinks { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+    .toplinks a { color: #fff; text-decoration: none; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.22); border-radius: 999px; background: rgba(255,255,255,0.08); }
+    .layout { display: grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start; }
+    .toc, .content { background: #fff; border: 1px solid #e5ded3; border-radius: 22px; box-shadow: 0 18px 40px rgba(15,23,42,0.08); }
+    .toc { position: sticky; top: 20px; padding: 22px 18px; }
+    .toc h2 { margin: 0 0 14px; font-size: 1rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.08em; }
+    .toc a { display: block; color: #1f2937; text-decoration: none; padding: 8px 10px; border-radius: 10px; margin-bottom: 4px; }
     .toc a:hover { background: #f3f4f6; }
     .content { padding: 30px; }
     section { margin-bottom: 34px; }
-    h2 {
-      margin: 0 0 12px;
-      font-size: 1.55rem;
-      color: #111827;
-      border-bottom: 2px solid #eef2f7;
-      padding-bottom: 8px;
-    }
-    h3 {
-      margin: 18px 0 8px;
-      color: #1d4ed8;
-      font-size: 1.06rem;
-    }
-    p { margin: 0 0 12px; }
+    h2 { margin: 0 0 12px; font-size: 1.55rem; color: #111827; border-bottom: 2px solid #eef2f7; padding-bottom: 8px; }
+    h3 { margin: 18px 0 8px; color: #1d4ed8; font-size: 1.06rem; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 6px; font-family: "SFMono-Regular", Consolas, monospace; }
     ul, ol { margin: 0 0 12px 20px; }
     li { margin-bottom: 6px; }
-    code {
-      background: #f3f4f6;
-      padding: 2px 6px;
-      border-radius: 6px;
-      font-family: "SFMono-Regular", Consolas, monospace;
-      font-size: 0.95em;
-    }
-    .note {
-      border-left: 4px solid var(--brand);
-      background: #eff6ff;
-      padding: 12px 14px;
-      border-radius: 12px;
-      margin: 14px 0;
-    }
-    @media (max-width: 900px) {
-      .layout { grid-template-columns: 1fr; }
-      .toc { position: static; }
-      .hero h1 { font-size: 1.9rem; }
-    }
+    .note { border-left: 4px solid #1f6feb; background: #eff6ff; padding: 12px 14px; border-radius: 12px; margin: 14px 0; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .toc { position: static; } .hero h1 { font-size: 1.9rem; } }
   </style>
 </head>
 <body>
   <div class="shell">
     <div class="hero">
       <h1>Manuale Utente</h1>
-      <p>Guida operativa per usare ICRONIUM RR Bridge durante la gestione gare, timing point e flussi live.</p>
+      <p>Guida operativa per usare ICRONIUM RR Bridge con RR, TZero, File View, TP View, Reader View e Speaker.</p>
       <div class="toplinks">
         <a href="/">Apri applicazione</a>
         <a href="./MANUALE-UTENTE.md">Versione Markdown</a>
@@ -140,205 +46,110 @@
         <h2>Indice</h2>
         <a href="#accesso">Accesso</a>
         <a href="#login">Login</a>
-        <a href="#dashboard">Dashboard</a>
-        <a href="#race-detail">Race Detail</a>
-        <a href="#source">Gestione source</a>
-        <a href="#totals">Totals e cicli</a>
-        <a href="#popup">Popup operative</a>
-        <a href="#blacklist">Blacklist</a>
+        <a href="#toolbar">Toolbar</a>
+        <a href="#settings">Settings</a>
+        <a href="#file-view">File View</a>
         <a href="#tp-view">TP View</a>
-        <a href="#rr-live">RR Live</a>
-        <a href="#messaggi">Messaggi e log</a>
-        <a href="#suggerimenti">Suggerimenti operativi</a>
+        <a href="#reader-view">Reader View</a>
+        <a href="#speaker">Speaker</a>
+        <a href="#tzero">TZero</a>
       </nav>
 
       <main class="content">
         <section id="accesso">
           <h2>Accesso</h2>
           <p>Apri il browser su <a href="http://localhost:8087">http://localhost:8087</a>.</p>
-          <p>La home presenta due modalità: <code>Login to RR</code> e <code>Login to RR local</code>.</p>
+          <p>La home presenta tre modalità: <code>Login a RR online</code>, <code>Login a RR locale</code>, <code>Login a TZero</code>.</p>
         </section>
 
         <section id="login">
           <h2>Login</h2>
-          <h3>Login to RR</h3>
-          <p>Usa questa modalità quando lavori con Race Result remoto.</p>
           <ul>
-            <li>Inserisci <code>userid</code></li>
-            <li>Inserisci <code>password</code></li>
-            <li>Premi <code>Login to RR</code></li>
+            <li><strong>RR online</strong>: usa credenziali RR remote e le ricorda nel browser</li>
+            <li><strong>RR locale</strong>: entra senza credenziali RR</li>
+            <li><strong>TZero</strong>: chiede la root folder al primo accesso e poi la riusa</li>
           </ul>
-          <p>Le credenziali vengono ricordate nel browser e riproposte agli accessi successivi.</p>
-
-          <h3>Login to RR local</h3>
-          <p>Usa questa modalità quando lavori contro Race Result locale. Non servono credenziali RR.</p>
+          <div class="note">Dopo il login arrivi nella <code>Race List</code>.</div>
         </section>
 
-        <section id="dashboard">
-          <h2>Dashboard</h2>
-          <p>Dopo il login si apre la dashboard con l'elenco delle gare.</p>
+        <section id="toolbar">
+          <h2>Toolbar comune</h2>
+          <p>Nelle viste operative trovi una navbar coerente con:</p>
           <ul>
-            <li><code>ID</code></li>
-            <li><code>Event name</code></li>
-            <li><code>Event date</code></li>
+            <li><code>Open RR</code></li>
+            <li><code>RR Live</code></li>
+            <li><code>TP View</code></li>
+            <li><code>File View</code></li>
+            <li><code>Reader View</code></li>
+            <li><code>Settings</code></li>
+            <li><code>Race List</code></li>
           </ul>
-          <p>Le gare sono ordinate per data decrescente. Per entrare in una gara premi <code>Select</code>.</p>
-          <div class="note">In basso trovi sempre la sezione <code>Messages</code>, aggiornata via WebSocket.</div>
+          <p>Il bottone corrente è evidenziato. In <code>TZERO</code> spariscono <code>Open RR</code> e <code>RR Live</code>.</p>
         </section>
 
-        <section id="race-detail">
-          <h2>Race Detail</h2>
-          <p>È la vista principale per gestire i file di passaggi.</p>
-          <p>Nella toolbar trovi <code>Dashboard</code>, <code>Open RR</code>, <code>RR Live</code>, <code>TP View</code>, <code>RR ID</code>, nome evento e data evento.</p>
-
-          <h3>Sync iniziale</h3>
-          <p>Quando entri nella pagina viene eseguito automaticamente un <code>SYNC</code>.</p>
-          <p>Il sync carica da RR:</p>
+        <section id="settings">
+          <h2>Settings</h2>
+          <p>È la pagina principale di configurazione gara.</p>
           <ul>
-            <li>Timing Point</li>
-            <li>tabella <code>BIB-CHIP</code></li>
-            <li>dati anagrafici atleta</li>
+            <li>gestione file sorgente</li>
+            <li>timing point</li>
+            <li>blacklist</li>
+            <li>filtri <code>From time</code> / <code>To time</code></li>
+            <li>simulated files</li>
           </ul>
-          <p>Puoi rilanciarlo manualmente con il bottone <code>SYNC</code>.</p>
+          <p>In <code>TZERO</code> il <code>SYNC</code> usa <code>participants.csv</code>, <code>download/</code>, <code>timingpoints.json</code> e <code>sources.json</code>.</p>
         </section>
 
-        <section id="source">
-          <h2>Gestione Source</h2>
-          <p>Un source è un file di passaggi da monitorare. Può essere:</p>
+        <section id="file-view">
+          <h2>File View</h2>
+          <p>Mostra una riga per file/source.</p>
           <ul>
-            <li>file locale</li>
-            <li>URL di rete locale <code>192.168...</code></li>
-            <li>URL remoto HTTP/HTTPS</li>
+            <li>status</li>
+            <li>totals</li>
+            <li>colonna <code>Last 10 cycles</code></li>
+            <li>grafico minuto per minuto</li>
           </ul>
-          <p>Per aggiungere una sorgente usa <code>Add file passings</code> e compila:</p>
-          <ul>
-            <li><code>Source</code></li>
-            <li><code>Timing point</code></li>
-            <li><code>Download every</code></li>
-            <li><code>Sync</code></li>
-          </ul>
-
-          <h3>Azioni riga</h3>
-          <ul>
-            <li><code>Play</code></li>
-            <li><code>Stop</code></li>
-            <li><code>Rewind</code></li>
-            <li><code>Edit</code></li>
-            <li><code>Duplicate</code></li>
-            <li><code>Delete</code></li>
-          </ul>
-
-          <h3>Stati</h3>
-          <ul>
-            <li><code>STOPPED</code></li>
-            <li><code>RUNNING</code></li>
-            <li><code>ERROR</code></li>
-          </ul>
-          <p>Se un download fallisce la riga va in <code>ERROR</code>, ma continua a riprovare finché non la fermi manualmente.</p>
-        </section>
-
-        <section id="totals">
-          <h2>Totals e Last 10 Cycles</h2>
-          <h3>Totals</h3>
-          <p>Ogni riga mostra 4 celle:</p>
-          <ul>
-            <li><code>READ</code>: righe lette</li>
-            <li><code>SENT</code>: righe inviate</li>
-            <li><code>DISC</code>: righe scartate</li>
-            <li><code>UNIQUE</code>: chip unici letti</li>
-          </ul>
-          <p>Le celle sono cliccabili per aprire i dettagli.</p>
-
-          <h3>Last 10 Cycles</h3>
-          <p>Mostra gli ultimi 10 cicli della riga:</p>
-          <ul>
-            <li><code>DL</code>: quante righe sono state lette nel ciclo</li>
-            <li><code>OUT</code>: quante righe sono state inviate nel ciclo</li>
-          </ul>
-          <p>Cliccando una cella apri il dettaglio del singolo ciclo.</p>
-        </section>
-
-        <section id="popup">
-          <h2>Popup operative</h2>
-          <h3>File content</h3>
-          <ul>
-            <li>sottotitolo con URL/path completo</li>
-            <li>ordine iniziale dal più recente al più vecchio</li>
-            <li>bottone <code>Newest/Oldest</code></li>
-            <li>campo filtro</li>
-            <li>colonna atleta</li>
-            <li>bottone <code>Black list</code></li>
-          </ul>
-
-          <h3>Unique</h3>
-          <p>Mostra i chip unici letti con ordinamento e filtro.</p>
-
-          <h3>Discarded</h3>
-          <p>Mostra le righe non riconosciute rispetto a <code>BIB-CHIP</code>. Anche qui puoi usare la blacklist.</p>
-        </section>
-
-        <section id="blacklist">
-          <h2>Blacklist</h2>
-          <p>La blacklist è per-riga. Un codice escluso su un source non viene escluso automaticamente sugli altri.</p>
-          <p>Se blacklisti un codice:</p>
-          <ul>
-            <li>sparisce dalle popup</li>
-            <li>non viene più conteggiato</li>
-            <li>non viene più inviato</li>
-          </ul>
-          <p>La popup <code>Blacklist</code> in toolbar permette di ripristinare i codici con <code>Restore</code>.</p>
+          <p>Supporta <code>Start time</code>, <code>Visible files</code> e ordinamento manuale con frecce.</p>
         </section>
 
         <section id="tp-view">
           <h2>TP View</h2>
-          <p><code>TP View</code> raggruppa i source per timing point.</p>
-          <p>Per ogni timing point vedi:</p>
+          <p>Vista a card per timing point.</p>
           <ul>
-            <li>nome timing point</li>
-            <li>lista dei source con stato</li>
-            <li>box <code>Totals</code> aggregato</li>
+            <li>ultimi 10 passaggi unici</li>
+            <li>totals aggregati</li>
+            <li>grafico del TP</li>
+            <li>bottoni <code>Speaker</code> e <code>QR</code></li>
           </ul>
-          <p>Le popup aggregate di <code>READ</code> e <code>UNIQUE</code> mostrano anche il file di provenienza.</p>
         </section>
 
-        <section id="rr-live">
-          <h2>RR Live</h2>
-          <p>Questa pagina gestisce il flusso basato sulle API live di Race Result.</p>
+        <section id="reader-view">
+          <h2>Reader View</h2>
+          <p>Vista a card per reader/device.</p>
           <ul>
-            <li>sync iniziale automatica</li>
-            <li>azioni <code>PLAY</code>, <code>STOP</code>, <code>RESET</code>, <code>DELETE</code></li>
-            <li>global actions</li>
-            <li>area <code>Messages</code></li>
+            <li>reader types: <code>ICRON</code>, <code>UBIDIUM</code>, <code>FEIBOT</code></li>
+            <li>location: <code>LAN</code>, <code>WAN</code>, <code>FS</code></li>
+            <li>lista file odierni, dimensione e orario</li>
+            <li>nome file verde se già collegato alla gara</li>
           </ul>
-          <p><code>RESET</code> azzera la memoria dell'ultimo file spedito, così il prossimo <code>PLAY</code> riparte da zero.</p>
+          <p><code>Scan LAN</code> censisce automaticamente i reader trovati. <code>Scan WAN</code> propone quelli attivi e lascia scegliere all'utente.</p>
         </section>
 
-        <section id="messaggi">
-          <h2>Messaggi e Log</h2>
-          <p>La sezione <code>Messages</code> serve per monitorare download, upload, errori e attività scheduler. È richiudibile e ricorda lo stato nel browser.</p>
-          <p>I log completi sono scritti in <code>logs/connector-rr.log</code>.</p>
+        <section id="speaker">
+          <h2>Speaker</h2>
+          <p>Pagina pubblica tokenizzata, senza login, pensata per il secondo monitor o per un device in LAN.</p>
+          <p>Replica la card TP in formato full-screen e mostra anche il <code>Team</code>.</p>
         </section>
 
-        <section id="suggerimenti">
-          <h2>Suggerimenti operativi</h2>
-          <h3>Avvio gara</h3>
-          <ol>
-            <li>Fai login</li>
-            <li>Seleziona la gara in dashboard</li>
-            <li>Verifica <code>SYNC</code></li>
-            <li>Controlla <code>BIB-CHIP</code> e <code>Timing Points</code></li>
-            <li>Aggiungi i source necessari</li>
-            <li>Premi <code>PLAY</code></li>
-            <li>Monitora <code>Totals</code>, <code>Last 10 cycles</code> e <code>Messages</code></li>
-          </ol>
-
-          <h3>Se un file va in errore</h3>
-          <ol>
-            <li>Controlla path o URL</li>
-            <li>Verifica lo stato <code>ERROR</code></li>
-            <li>Guarda i messaggi in basso</li>
-            <li>Usa <code>STOP</code> solo se vuoi fermare i tentativi automatici</li>
-          </ol>
+        <section id="tzero">
+          <h2>TZero</h2>
+          <p>In <code>TZERO</code> ICRONIUM configura e governa la gara su filesystem.</p>
+          <ul>
+            <li>timing point da <code>config/timingpoints.json</code></li>
+            <li>sorgenti da <code>config/sources.json</code></li>
+            <li>mirror dei file remoti dentro <code>download/</code></li>
+            <li>delete sicuro: spostamento in <code>deleted/</code> con timestamp</li>
+          </ul>
         </section>
       </main>
     </div>

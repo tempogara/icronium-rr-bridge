@@ -14,6 +14,7 @@ import it.icron.icronium.connector.rr.model.ChatMessage;
 import it.icron.icronium.connector.rr.model.LocalFileRequest;
 import it.icron.icronium.connector.rr.model.RemoteFileRequest;
 import it.icron.icronium.connector.rr.model.SimulatedFileRequest;
+import it.icron.icronium.connector.rr.model.TZeroSourceConfig;
 import it.icron.icronium.connector.rr.model.TimingPointResponse;
 import it.icron.icronium.connector.rr.model.UpdateTimingPointRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -311,8 +312,12 @@ public class RRGaraDettaglioService {
         snapshot.setRows(rows);
         enrichSnapshotConnectionFromSession(snapshot);
         repository.save(snapshot);
-        if (sessionService.isTZeroMode() && request.getTimingPoint() != null && !request.getTimingPoint().isBlank()) {
-            tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, extractFileName(request.getUrl().trim()), request.getTimingPoint().trim());
+        if (sessionService.isTZeroMode()) {
+            GaraDettaglioRow added = rows.get(rows.size() - 1);
+            tZeroConfigService.upsertSourceConfig(sessionService.getTZeroRootFolder(), eventId, added);
+            if (request.getTimingPoint() != null && !request.getTimingPoint().isBlank()) {
+                tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, extractFileName(request.getUrl().trim()), request.getTimingPoint().trim());
+            }
         }
         return rows;
     }
@@ -349,8 +354,12 @@ public class RRGaraDettaglioService {
         snapshot.setRows(rows);
         enrichSnapshotConnectionFromSession(snapshot);
         repository.save(snapshot);
-        if (sessionService.isTZeroMode() && request.getTimingPoint() != null && !request.getTimingPoint().isBlank()) {
-            tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, extractFileName(request.getLocalPath().trim()), request.getTimingPoint().trim());
+        if (sessionService.isTZeroMode()) {
+            GaraDettaglioRow added = rows.get(rows.size() - 1);
+            tZeroConfigService.upsertSourceConfig(sessionService.getTZeroRootFolder(), eventId, added);
+            if (request.getTimingPoint() != null && !request.getTimingPoint().isBlank()) {
+                tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, extractFileName(request.getLocalPath().trim()), request.getTimingPoint().trim());
+            }
         }
         return rows;
     }
@@ -388,8 +397,12 @@ public class RRGaraDettaglioService {
         snapshot.setRows(rows);
         enrichSnapshotConnectionFromSession(snapshot);
         repository.save(snapshot);
-        if (sessionService.isTZeroMode() && request.getTimingPoint() != null && !request.getTimingPoint().isBlank()) {
-            tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, extractFileName(request.getSource().trim()), request.getTimingPoint().trim());
+        if (sessionService.isTZeroMode()) {
+            GaraDettaglioRow added = rows.get(rows.size() - 1);
+            tZeroConfigService.upsertSourceConfig(sessionService.getTZeroRootFolder(), eventId, added);
+            if (request.getTimingPoint() != null && !request.getTimingPoint().isBlank()) {
+                tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, extractFileName(request.getSource().trim()), request.getTimingPoint().trim());
+            }
         }
         return rows;
     }
@@ -465,6 +478,7 @@ public class RRGaraDettaglioService {
         enrichSnapshotConnectionFromSession(snapshot);
         repository.save(snapshot);
         if (sessionService.isTZeroMode()) {
+            tZeroConfigService.upsertSourceConfig(sessionService.getTZeroRootFolder(), eventId, row);
             tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, simulatedFile.getFileName().toString(), timingPoint);
         }
         return snapshot.getRows();
@@ -484,6 +498,7 @@ public class RRGaraDettaglioService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cancellazione consentita solo in stato Stopped");
         }
         if (sessionService.isTZeroMode()) {
+            tZeroConfigService.removeSourceConfig(sessionService.getTZeroRootFolder(), eventId, row.getSource());
             tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, extractFileName(row.getSource()), "");
             deleteTZeroSourceFileIfPresent(row);
         }
@@ -505,6 +520,7 @@ public class RRGaraDettaglioService {
         }
         for (GaraDettaglioRow row : snapshot.getRows()) {
             if (sessionService.isTZeroMode()) {
+                tZeroConfigService.removeSourceConfig(sessionService.getTZeroRootFolder(), eventId, row.getSource());
                 tZeroConfigService.assignSourceToTimingPoint(sessionService.getTZeroRootFolder(), eventId, extractFileName(row.getSource()), "");
                 deleteTZeroSourceFileIfPresent(row);
             }
@@ -590,6 +606,8 @@ public class RRGaraDettaglioService {
                 row.setFilterToTime(sanitizeFilterTime(request.getFilterToTime()));
                 applyAction(row, "rewind", false);
                 if (sessionService.isTZeroMode()) {
+                    tZeroConfigService.removeSourceConfig(sessionService.getTZeroRootFolder(), eventId, row.getSource());
+                    tZeroConfigService.upsertSourceConfig(sessionService.getTZeroRootFolder(), eventId, row);
                     tZeroConfigService.assignSourceToTimingPoint(
                             sessionService.getTZeroRootFolder(),
                             eventId,
@@ -948,6 +966,7 @@ public class RRGaraDettaglioService {
 
         List<String> timingPoints = new ArrayList<>();
         Map<String, String> timingPointBySource = tZeroConfigService.buildTimingPointBySourceMap(rootFolder, eventId);
+        List<TZeroSourceConfig> sourceConfigs = tZeroConfigService.loadSourceConfigs(rootFolder, eventId);
         GaraDettaglioSnapshot snapshot = repository.findByEventId(eventId)
                 .orElseGet(() -> createSnapshotFromSession(eventId));
         ensureRowIds(snapshot);
@@ -955,13 +974,53 @@ public class RRGaraDettaglioService {
         Map<String, GaraDettaglioRow> existingBySource = new HashMap<>();
         for (GaraDettaglioRow row : snapshot.getRows()) {
             if (row.getSource() != null && !row.getSource().isBlank()) {
-                existingBySource.put(Paths.get(row.getSource()).toAbsolutePath().normalize().toString(), row);
+                existingBySource.put(normalizeTZeroSourceKey(row.getSource()), row);
             }
         }
 
         List<GaraDettaglioRow> updatedRows = new ArrayList<>();
+        java.util.Set<String> configuredFileNames = new java.util.HashSet<>();
+        for (TZeroSourceConfig config : sourceConfigs) {
+            String source = config.getSource() == null ? "" : config.getSource().trim();
+            if (source.isBlank()) {
+                continue;
+            }
+            configuredFileNames.add(extractFileName(source).toLowerCase());
+            GaraDettaglioRow existing = existingBySource.get(normalizeTZeroSourceKey(source));
+            String configuredTimingPoint = config.getTimingPoint() == null ? "" : config.getTimingPoint().trim();
+            if (configuredTimingPoint.isBlank()) {
+                configuredTimingPoint = timingPointBySource.getOrDefault(extractFileName(source).toLowerCase(), "");
+            }
+            GaraDettaglioRow row = existing != null ? existing : new GaraDettaglioRow(
+                    UUID.randomUUID().toString(),
+                    source,
+                    configuredTimingPoint,
+                    "Stopped",
+                    config.getScaricaOgniSec() == null ? 10 : config.getScaricaOgniSec(),
+                    "",
+                    0,
+                    0,
+                    0
+            );
+            row.setSource(source);
+            row.setTimingPoint(configuredTimingPoint);
+            row.setScaricaOgniSec(config.getScaricaOgniSec() == null ? 10 : config.getScaricaOgniSec());
+            row.setSyncOffset(sanitizeSyncOffset(config.getSyncOffset()));
+            row.setFilterFromTime(sanitizeFilterTime(config.getFilterFromTime()));
+            row.setFilterToTime(sanitizeFilterTime(config.getFilterToTime()));
+            row.setSourceKind(resolveSourceKind(source, config.getSourceKind()));
+            updatedRows.add(row);
+            if (!configuredTimingPoint.isBlank()) {
+                timingPoints.add(configuredTimingPoint);
+            }
+        }
+
         for (Path filePath : filePaths) {
             String normalizedSource = filePath.toAbsolutePath().normalize().toString();
+            String fileNameLower = filePath.getFileName().toString().toLowerCase();
+            if (configuredFileNames.contains(fileNameLower)) {
+                continue;
+            }
             GaraDettaglioRow existing = existingBySource.get(normalizedSource);
             String configuredTimingPoint = timingPointBySource.getOrDefault(filePath.getFileName().toString().toLowerCase(), "");
             if (existing != null) {
@@ -1007,6 +1066,17 @@ public class RRGaraDettaglioService {
         sessionService.saveSyncData(eventId, new RRGaraSyncData(participantsCount, distinctTimingPoints, bibChipRows));
 
         return new GaraSyncResponse(eventId, buildEventLandingUrl(eventId), participantsCount, distinctTimingPoints);
+    }
+
+    private String normalizeTZeroSourceKey(String source) {
+        if (source == null || source.isBlank()) {
+            return "";
+        }
+        String trimmed = source.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            return trimmed;
+        }
+        return Paths.get(trimmed).toAbsolutePath().normalize().toString();
     }
 
     private GaraDettaglioSnapshot createSnapshotFromSession(String eventId) {
@@ -1424,10 +1494,14 @@ public class RRGaraDettaglioService {
             return;
         }
         if (sessionService.isTZeroMode()) {
+            snapshot.setConnectionMode("TZERO");
+            snapshot.setTzeroRootFolder(sessionService.getTZeroRootFolder());
             snapshot.setRrHost("");
             snapshot.setRrPw("");
             return;
         }
+        snapshot.setConnectionMode(sessionService.isLocalMode() ? "RR_LOCALE" : "RR");
+        snapshot.setTzeroRootFolder("");
         String host = sessionService.isLocalMode() ? "http://localhost" : "https://events.raceresult.com";
         String pw = sessionService.isLocalMode() ? "0" : sessionService.getRrPw();
         if (pw == null || pw.isBlank()) {
@@ -1457,7 +1531,7 @@ public class RRGaraDettaglioService {
                 if (!isDueForDownload(row)) {
                     continue;
                 }
-                boolean rowChanged = executeDownload(snapshot.getEventId(), row);
+                boolean rowChanged = executeDownload(snapshot, row);
                 snapshotChanged = snapshotChanged || rowChanged;
             }
 
@@ -1477,7 +1551,7 @@ public class RRGaraDettaglioService {
     }
 
     private void triggerDownloadNow(GaraDettaglioSnapshot snapshot, GaraDettaglioRow row) {
-        boolean changed = executeDownload(snapshot.getEventId(), row);
+        boolean changed = executeDownload(snapshot, row);
         if (changed) {
             try {
                 repository.save(snapshot);
@@ -1499,7 +1573,8 @@ public class RRGaraDettaglioService {
         }
     }
 
-    private boolean executeDownload(String eventId, GaraDettaglioRow row) {
+    private boolean executeDownload(GaraDettaglioSnapshot snapshot, GaraDettaglioRow row) {
+        String eventId = snapshot.getEventId();
         String rowKey = eventId + ":" + row.getRowId();
         if (rowExecutionLocks.putIfAbsent(rowKey, Boolean.TRUE) != null) {
             return false;
@@ -1526,6 +1601,9 @@ public class RRGaraDettaglioService {
             } else {
                 downloadedPath = FileDownloader.download(source);
             }
+            if (isTZeroSnapshot(snapshot) && (source.startsWith("http://") || source.startsWith("https://"))) {
+                mirrorRemoteDownloadIntoTZeroDownload(snapshot, downloadedPath);
+            }
 
             List<String> visibleLines = loadVisibleLines(downloadedPath, row);
             long lines = visibleLines.size();
@@ -1538,7 +1616,7 @@ public class RRGaraDettaglioService {
             row.setErrorState(false);
             row.setLastErrorMessage(null);
             appendDelta(row, (int) Math.max(0, lines - previousLines), downloadCycleLines);
-            PostBatchResult postResult = sendDeltaToExternal(eventId, row, downloadedPath);
+            PostBatchResult postResult = sendDeltaToExternal(snapshot, row, downloadedPath);
             int sentDelta = postResult.getSentLines() == null ? 0 : postResult.getSentLines().size();
             appendSentDelta(row, sentDelta, postResult.getSentLines());
             row.setRighePo((int) postResult.getUploadedLines());
@@ -1565,6 +1643,25 @@ public class RRGaraDettaglioService {
             return false;
         } finally {
             rowExecutionLocks.remove(rowKey);
+        }
+    }
+
+    private void mirrorRemoteDownloadIntoTZeroDownload(GaraDettaglioSnapshot snapshot, Path downloadedPath) {
+        try {
+            String rootFolder = snapshot.getTzeroRootFolder();
+            if (rootFolder == null || rootFolder.isBlank()) {
+                return;
+            }
+            String eventId = snapshot.getEventId();
+            Path targetDir = Paths.get(rootFolder, eventId, "download").toAbsolutePath().normalize();
+            Files.createDirectories(targetDir);
+            Path fileName = downloadedPath.getFileName();
+            if (fileName == null) {
+                return;
+            }
+            Files.copy(downloadedPath, targetDir.resolve(fileName.toString()), StandardCopyOption.REPLACE_EXISTING);
+        } catch (Exception ex) {
+            log.warn("[{}] Unable to mirror remote download into TZero download folder: {}", snapshot.getEventId(), ex.getMessage());
         }
     }
 
@@ -1741,7 +1838,8 @@ public class RRGaraDettaglioService {
         messagingTemplate.convertAndSend("/topic/gare-updates", new GaraRowUpdateMessage(eventId, row));
     }
 
-    private PostBatchResult sendDeltaToExternal(String eventId, GaraDettaglioRow row, Path downloadedPath) {
+    private PostBatchResult sendDeltaToExternal(GaraDettaglioSnapshot snapshot, GaraDettaglioRow row, Path downloadedPath) {
+        String eventId = snapshot.getEventId();
         try {
             Optional<GaraDettaglioSnapshot> snapshotOpt = repository.findByEventId(eventId);
             if (snapshotOpt.isEmpty() || snapshotOpt.get().getBibChipRows() == null || snapshotOpt.get().getBibChipRows().isEmpty()) {
@@ -1749,19 +1847,19 @@ public class RRGaraDettaglioService {
                 return new PostBatchResult(row.getUploadedLines(), new ArrayList<>());
             }
 
-            GaraDettaglioSnapshot snapshot = snapshotOpt.get();
+            GaraDettaglioSnapshot persistedSnapshot = snapshotOpt.get();
             Map<String, Integer> chipBibMap = new HashMap<>();
-            snapshot.getBibChipRows().forEach(entry -> chipBibMap.put(entry.getChip(), entry.getBib()));
+            persistedSnapshot.getBibChipRows().forEach(entry -> chipBibMap.put(entry.getChip(), entry.getBib()));
 
-            String host = snapshot.getRrHost();
-            String pw = snapshot.getRrPw();
-            if (!sessionService.isTZeroMode() && (host == null || host.isBlank() || pw == null || pw.isBlank())) {
+            String host = persistedSnapshot.getRrHost();
+            String pw = persistedSnapshot.getRrPw();
+            if (!isTZeroSnapshot(persistedSnapshot) && (host == null || host.isBlank() || pw == null || pw.isBlank())) {
                 log.warn("[{}/{}] Invio esterno saltato: connessione RR non inizializzata nello snapshot", eventId, row.getRowId());
                 return new PostBatchResult(row.getUploadedLines(), new ArrayList<>());
             }
 
             ConnectorContext ctx = new ConnectorContext();
-            if (sessionService.isTZeroMode()) {
+            if (isTZeroSnapshot(persistedSnapshot)) {
                 ctx.setSimulateOnly(true);
                 ctx.setRrId(eventId);
             } else {
@@ -1788,6 +1886,10 @@ public class RRGaraDettaglioService {
             notifyDownload(eventId, row.getRowId(), "Errore invio esterno: " + ex.getMessage());
             return new PostBatchResult(row.getUploadedLines(), new ArrayList<>());
         }
+    }
+
+    private boolean isTZeroSnapshot(GaraDettaglioSnapshot snapshot) {
+        return snapshot != null && "TZERO".equalsIgnoreCase(snapshot.getConnectionMode());
     }
 
     private void appendDelta(GaraDettaglioRow row, int delta, List<String> cycleLines) {

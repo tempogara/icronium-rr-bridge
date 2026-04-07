@@ -5,105 +5,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Start Here - ICRONIUM RR Bridge</title>
   <style>
-    body { margin: 0; font-family: "Avenir Next", "Segoe UI", sans-serif; background: #f7f7f5; color: #1f2937; }
-    .wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 60px; }
-    .hero { background: linear-gradient(135deg, #111827 0%, #1f2937 60%, #9f1239 100%); color: #fff; border-radius: 24px; padding: 28px 30px; }
-    .hero h1 { margin: 0 0 10px; }
-    .hero p { margin: 0; color: rgba(255,255,255,0.85); }
-    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 20px; padding: 24px 26px; margin-top: 18px; box-shadow: 0 14px 32px rgba(15,23,42,0.06); }
+    body { margin: 0; font-family: "Avenir Next", "Segoe UI", sans-serif; background: #f8fafc; color: #0f172a; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 32px 20px 60px; }
+    .hero { background: #0f172a; color: white; padding: 28px 30px; border-radius: 20px; }
+    .card { background: white; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 26px; margin-top: 20px; box-shadow: 0 12px 28px rgba(15,23,42,0.05); }
     h2 { margin-top: 0; border-bottom: 2px solid #eef2f7; padding-bottom: 8px; }
-    code, pre { font-family: Consolas, monospace; }
-    code { background: #f3f4f6; padding: 2px 6px; border-radius: 6px; }
-    pre { background: #0f172a; color: #e5e7eb; padding: 14px; border-radius: 14px; overflow: auto; }
-    ul, ol { margin-bottom: 14px; }
-    .hl { color: #1d4ed8; font-weight: 700; }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 6px; font-family: Consolas, monospace; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="hero">
       <h1>Start Here</h1>
-      <p>Guida rapida per chi riceve il file distribuito di ICRONIUM RR Bridge e deve avviarlo per la prima volta.</p>
+      <p>Guida rapida per avviare il pacchetto distribuito di ICRONIUM RR Bridge.</p>
     </div>
 
     <div class="card">
-      <h2>Contenuto del pacchetto</h2>
-      <ul>
-        <li><code>app.jar</code></li>
-        <li><code>start.sh</code> e <code>stop.sh</code></li>
-        <li><code>start.bat</code> e <code>stop.bat</code></li>
-        <li><code>config/application.yml</code></li>
-        <li><code>logs/</code></li>
-        <li><code>data/</code></li>
-        <li><code>docs/</code></li>
-      </ul>
+      <h2>Contenuto</h2>
+      <p>Nel pacchetto trovi <code>app.jar</code>, script <code>start/stop</code>, configurazione, log, dati e documentazione.</p>
     </div>
 
     <div class="card">
       <h2>Requisiti</h2>
-      <ul>
-        <li>Java <code>21</code></li>
-        <li>Browser moderno</li>
-        <li>Accesso alla rete necessaria per Race Result</li>
-      </ul>
+      <p>Serve Java <code>21</code>.</p>
     </div>
 
     <div class="card">
-      <h2>Primo avvio</h2>
-      <ol>
-        <li>Scompatta il file zip</li>
-        <li>Apri la cartella estratta</li>
-        <li>Verifica Java con <code>java -version</code></li>
-        <li>Avvia l'applicazione</li>
-      </ol>
-      <p class="hl">macOS / Linux</p>
-      <pre><code>chmod +x start.sh stop.sh
-./start.sh</code></pre>
-      <p class="hl">Windows</p>
-      <p>Doppio clic su <code>start.bat</code></p>
+      <h2>Avvio</h2>
+      <p>macOS/Linux:</p>
+      <p><code>chmod +x start.sh stop.sh</code><br><code>./start.sh</code></p>
+      <p>Windows: usa <code>start.bat</code>.</p>
     </div>
 
     <div class="card">
       <h2>Accesso</h2>
-      <p>Dopo l'avvio apri il browser su:</p>
-      <p><code>http://localhost:8089</code></p>
-      <p>La porta è definita nel file <code>config/application.yml</code>.</p>
+      <p>Apri il browser su <code>http://localhost:8089</code>, salvo diversa porta in <code>config/application.yml</code>.</p>
+    </div>
+
+    <div class="card">
+      <h2>Login</h2>
+      <p>La home supporta <code>RR online</code>, <code>RR locale</code> e <code>TZero</code>.</p>
     </div>
 
     <div class="card">
       <h2>Manuali</h2>
-      <p>Nel pacchetto trovi:</p>
+      <p>Apri:</p>
       <ul>
-        <li><code>docs/start-here-distribuzione.html</code></li>
         <li><code>docs/manuale-utente.html</code></li>
         <li><code>docs/manuale-tecnico.html</code></li>
       </ul>
-      <p>Per iniziare usa prima <code>start-here-distribuzione.html</code>, poi <code>manuale-utente.html</code>.</p>
     </div>
 
     <div class="card">
-      <h2>Log e dati</h2>
-      <ul>
-        <li>Log runtime: <code>logs/app.out</code></li>
-        <li>Dati applicativi: <code>data/</code></li>
-      </ul>
-    </div>
-
-    <div class="card">
-      <h2>Stop</h2>
-      <p class="hl">macOS / Linux</p>
-      <pre><code>./stop.sh</code></pre>
-      <p class="hl">Windows</p>
-      <p>Arresta il processo Java dal Task Manager oppure con <code>taskkill</code>.</p>
-    </div>
-
-    <div class="card">
-      <h2>Problemi comuni</h2>
-      <ul>
-        <li>Se il browser non apre la pagina, controlla <code>logs/app.out</code></li>
-        <li>Se Java non è trovato, installa Java 21</li>
-        <li>Se la porta è occupata, modifica <code>config/application.yml</code></li>
-      </ul>
+      <h2>Log</h2>
+      <p>Runtime package: <code>logs/app.out</code></p>
     </div>
   </div>
 </body>

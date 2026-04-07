@@ -1,117 +1,113 @@
 # Start Here - Distribuzione ICRONIUM RR Bridge
 
-Questa guida è pensata per chi riceve il pacchetto distribuito dell'applicazione e deve avviarla senza conoscere il progetto sorgente.
+Guida rapida per chi riceve il pacchetto distribuito.
 
 ## Contenuto del pacchetto
 Nel file zip trovi:
-- `app.jar`: applicazione principale
-- `start.sh` e `stop.sh`: avvio/arresto su macOS/Linux
-- `start.bat` e `stop.bat`: avvio/arresto su Windows
-- `config/application.yml`: configurazione runtime
-- `logs/`: cartella log
-- `data/`: cartella dati persistenti
-- `docs/`: manuali
+- `app.jar`
+- `start.sh` e `stop.sh`
+- `start.bat` e `stop.bat`
+- `config/application.yml`
+- `docs/`
+- `logs/`
+- `data/`
 
 ## Requisiti minimi
-- Java `21` installato
+- Java `21`
 - Browser moderno
-- Accesso alla rete necessaria per collegarsi a Race Result e agli endpoint esterni
+- rete disponibile verso Race Result o verso le cartelle/TP usati
 
 ## Primo avvio
-1. Scompatta il file zip in una cartella a tua scelta
-2. Apri la cartella estratta
-3. Verifica di avere Java 21 disponibile con:
+1. scompatta il file zip
+2. entra nella cartella estratta
+3. verifica Java:
 
 ```bash
 java -version
 ```
 
-4. Avvia l'applicazione
-
-### Avvio su macOS/Linux
-Apri il terminale nella cartella estratta e lancia:
-
+## Avvio su macOS/Linux
 ```bash
 chmod +x start.sh stop.sh
 ./start.sh
 ```
 
-### Avvio su Windows
-Doppio clic su:
-- `start.bat`
+## Avvio su Windows
+- doppio click su `start.bat`
 
 ## Accesso all'applicazione
-Dopo l'avvio apri il browser su:
+Di default apri:
 - `http://localhost:8089`
 
-Nota:
-- nel pacchetto distribuito la porta di default è configurata in `config/application.yml`
-- se modifichi la porta nel file di configurazione, dovrai usare la nuova porta nel browser
+La porta del pacchetto distribuito dipende da:
+- `config/application.yml`
 
-## Login
-Nella pagina iniziale trovi due modalità:
-- `Login to RR`
-- `Login to RR local`
+## Modalità di login
+Home:
+- `Login a RR online`
+- `Login a RR locale`
+- `Login a TZero`
 
-Usa `Login to RR local` se lavori contro un ambiente Race Result locale.
+### RR online
+- usa credenziali Race Result remote
+- il browser può ricordarle
+
+### RR locale
+- usa Race Result locale
+- non richiede credenziali RR
+
+### TZero
+- al primo accesso chiede la `TZero Root Folder`
+- poi la riusa automaticamente
 
 ## Dove leggere i manuali
 Nel pacchetto trovi:
+- `docs/start-here-distribuzione.html`
 - `docs/manuale-utente.html`
 - `docs/manuale-tecnico.html`
 - `docs/MANUALE-UTENTE.md`
 
-Il file più adatto per partire è:
-- `docs/manuale-utente.html`
+Per partire apri:
+- `docs/start-here-distribuzione.html`
 
 ## Dove trovare i log
-I log runtime del pacchetto distribuito vengono scritti in:
+Runtime pacchetto:
 - `logs/app.out`
 
+Log applicativo interno:
+- `logs/connector-rr.log` se configurato dall'applicazione
+
 ## Dove vengono salvati i dati
-La cartella dati del pacchetto distribuito è:
+Cartella:
 - `data/`
 
-Qui l'applicazione può memorizzare configurazioni, stato e dati persistenti in base alle funzioni attivate.
+Qui l'app salva lo stato persistente dell'applicazione.
 
 ## Arresto applicazione
 ### macOS/Linux
-Da terminale:
-
 ```bash
 ./stop.sh
 ```
 
 ### Windows
-Il file `stop.bat` è solo informativo. Se necessario, arresta il processo Java dal Task Manager oppure usa un comando `taskkill`.
-
-## Configurazione porta
-File:
-- `config/application.yml`
-
-Esempio:
-
-```yaml
-server:
-  port: 8089
-```
+- usa `stop.bat` oppure arresta il processo Java dal Task Manager
 
 ## Problemi comuni
-### Il browser non apre la pagina
+### La pagina non si apre
 Verifica:
-- che il processo Java sia partito correttamente
-- che la porta configurata sia quella corretta
-- che nel file `logs/app.out` non ci siano errori di avvio
+- che il processo Java sia partito
+- che la porta configurata sia quella giusta
+- che `logs/app.out` non contenga errori
 
 ### Java non trovato
 Installa Java 21 e riprova.
 
-### La porta è occupata
-Modifica `config/application.yml` e imposta una porta libera, poi riavvia l'applicazione.
+### Porta occupata
+Cambia `config/application.yml` e riavvia.
 
 ## Riferimenti rapidi
-- Avvio: `start.sh` o `start.bat`
-- Stop: `stop.sh`
-- URL applicazione: `http://localhost:8089`
-- Manuale utente: `docs/manuale-utente.html`
-- Log: `logs/app.out`
+- avvio: `start.sh` o `start.bat`
+- stop: `stop.sh`
+- URL: `http://localhost:8089`
+- manuale utente: `docs/manuale-utente.html`
+- log: `logs/app.out`

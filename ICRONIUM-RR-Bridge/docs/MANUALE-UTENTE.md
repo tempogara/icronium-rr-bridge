@@ -1,330 +1,300 @@
 # Manuale Utente
 
-Questo manuale descrive il funzionamento operativo dell'applicazione ICRONIUM RR Bridge dal punto di vista dell'utente.
+Manuale operativo di ICRONIUM RR Bridge.
 
-## Accesso all'applicazione
+## Accesso
 Apri il browser su:
 - [http://localhost:8087](http://localhost:8087)
 
-La home presenta due possibilità:
-- `Login to RR`
-- `Login to RR local`
+Home:
+- `Login a RR online`
+- `Login a RR locale`
+- `Login a TZero`
 
 ## Login
-### Login to RR
-Usa questa modalità quando lavori con Race Result remoto.
+### RR online
+- usa credenziali Race Result remote
+- le credenziali vengono ricordate nel browser
+- la rotellina `settings` in alto a destra permette di cambiarle
 
-Inserisci:
-- `userid`
-- `password`
+### RR locale
+- usa Race Result locale
+- non richiede credenziali RR
 
-Premi:
-- `Login to RR`
+### TZero
+- al primo accesso chiede la `TZero Root Folder`
+- ai successivi usa quella già definita
+- dalla `Race List` puoi cambiarla con il bottone dedicato
 
-Le credenziali vengono ricordate dal browser e riproposte agli accessi successivi.
+## Race List
+Mostra l'elenco gare.
 
-### Login to RR local
-Usa questa modalità quando lavori contro una installazione locale di Race Result.
+Comportamento:
+- in modalità RR mostra le gare RR
+- in modalità TZero mostra le sottocartelle gara della root TZero
 
-Non servono credenziali RR.
+## Toolbar comune
+Nelle pagine operative trovi una navbar stabile.
 
-Premi:
-- `Login to RR local`
-
-## Dashboard
-Dopo il login si apre la dashboard.
-
-La tabella mostra:
-- `ID`
-- `Event name`
-- `Event date`
-
-Le gare sono ordinate per data decrescente.
-
-Per entrare in una gara:
-- clicca `Select`
-
-In basso è sempre presente l'area `Messages`, che mostra messaggi ricevuti via WebSocket.
-
-## Race Detail
-La pagina `Race Detail` è la vista principale di lavoro sui file di passaggi.
-
-### Parte alta pagina
-Nella toolbar trovi:
-- `Dashboard`
+Voci principali:
 - `Open RR`
 - `RR Live`
 - `TP View`
-- `RR ID`
-- nome evento
-- data evento
+- `File View`
+- `Reader View`
+- `Settings`
+- `Race List`
 
-Sotto la toolbar vedi il nome gara e la data evento.
+Note:
+- il bottone corrente è evidenziato
+- in `TZERO` il bottone `Open RR` sparisce
+- in `TZERO` il bottone `RR Live` sparisce
+
+## Settings
+La pagina `Settings` è la vecchia `Race Detail`.
+
+Qui configuri:
+- i file della gara
+- i timing point
+- la blacklist
+- i filtri orari sui file
+- i file simulati
 
 ## Sync iniziale
-Quando entri nella pagina viene eseguito automaticamente un `SYNC`.
+Entrando in `Settings` viene eseguito `SYNC`.
 
-Il sync:
-- carica da RR i `Timing Point`
-- carica da RR la tabella `BIB-CHIP`
-- salva i dati in sessione
+### In RR
+Carica:
+- timing point
+- tabella `BIB-CHIP`
+- anagrafica atleta
 
-Puoi rilanciare manualmente il sync con il bottone:
-- `SYNC`
+### In TZero
+Carica:
+- `participants.csv`
+- i file `file-*` nella cartella `download`
+- i timing point da `config/timingpoints.json`
+- le sorgenti censite da `config/sources.json`
 
-## Popup di supporto
-### BIB-CHIP
-Mostra i dati atleta caricati da RR:
-- `Chip`
-- `Bib`
-- `LastName`
-- `FirstName`
+Esclusioni automatiche file TZero:
+- nomi contenenti `MERGED`
+- nomi contenenti `CORREZIONI`
 
-### Timing Points
-Mostra tutti i timing point disponibili per la gara.
+## Configurazione file
+Da `Settings` puoi aggiungere e configurare file passaggi.
+
+Campi principali:
+- `Source`
+- `Timing point`
+- `Download every`
+- `Sync offset`
+- `From time`
+- `To time`
+
+I campi `From time` / `To time` escludono i rilevamenti fuori finestra alla radice del parsing.
+
+Placeholder:
+- `00:00:00`
+- `23:59:00`
+
+## Tipi di sorgente
+Icone usate:
+- `L`: file locale
+- `N`: rete LAN
+- `W`: URL WAN/remoto
+- `S`: file simulato
+
+## Simulated file
+Da `Settings` puoi usare `Add simulated file`.
+
+Configuri:
+- nome file
+- timing point
+- finestra temporale da/a
+- frequenza righe
+
+Il file simulato:
+- viene creato come `file-sim-*`
+- in `TZERO` viene scritto nella cartella gara `download`
+- in RR viene scritto sotto `~/icronium-work`
+
+## Totals
+Le celle principali sono:
+- `READ`
+- `SENT`
+- `DISC`
+- `UNIQUE`
+
+In `TZERO`:
+- `SENT` non compare
+- il post verso RR non viene fatto davvero
+- il processamento serve comunque a calcolare `Discarded`
+
+## Last 10 cycles
+Mostrano gli ultimi cicli della riga:
+- `DL`
+- `OUT`
+
+In `TZERO`:
+- `OUT` non compare
+
+Le celle sono cliccabili e aprono il dettaglio del ciclo.
+
+## Popup operative
+### File content
+- mostra il contenuto del file
+- supporta filtro testuale
+- puoi mettere in blacklist un codice
+
+### Unique
+- mostra i chip unici
+- supporta filtro e ordinamento
+
+### Discarded
+- mostra i passaggi non riconosciuti
+- da qui puoi blacklistare
 
 ### Blacklist
-Mostra i codici esclusi manualmente e permette il `Restore`.
+- mostra i codici esclusi
+- `Restore` li riattiva
 
-### Unknown chips
-Mostra i chip non riconosciuti rispetto alla tabella BIB-CHIP.
+## File View
+Vista per singolo file/source.
 
-## Aggiunta di un source
-Per aggiungere una sorgente di passaggi usa:
-- `Add file passings`
-
-Nella popup puoi indicare:
-- `Source`: URL o percorso file locale
-- `Timing point`
-- `Download every`: ogni quanti secondi scaricare
-- `Sync`: eventuale offset da applicare al timestamp prima dell'invio esterno
-
-Esempi di source:
-- file locale
-- URL interno di rete `192.168...`
-- URL remoto HTTP/HTTPS
-
-## Tabella dei source
-Ogni riga della tabella rappresenta un source.
-
-### Colonna Actions
-Bottoni disponibili sulla singola riga:
-- `Play`
-- `Stop`
-- `Rewind`
-- `Edit`
-- `Duplicate`
-- `Delete`
-
-Regole:
-- all'inizio le righe sono in stato `STOPPED`
-- se la riga è `RUNNING`, restano attivi solo i comandi compatibili con l'esecuzione
-- `STOP` diventa disponibile solo quando la riga è in esecuzione
-
-### Colonna Status
-Stati possibili:
-- `STOPPED`
-- `RUNNING`
-- `ERROR`
-
-Se un download fallisce, la riga va in `ERROR`, ma continua a riprovare ai cicli successivi finché non premi `STOP`.
-
-### Colonna Source
 Mostra:
-- icona del tipo di sorgente
-- nome file
-- intervallo `every`
-- eventuale `sync`
+- file
+- status
+- totals
+- colonna `Last 10 cycles`
+- grafico minuto per minuto
 
-Significato icone:
-- `L`: file locale
-- `N`: rete locale
-- `W`: web/remoto
+Funzioni utili:
+- `Start time` con `Apply` e `Reset`
+- selezione `Visible files`
+- ordinamento manuale con frecce
+- ordine e filtri ricordati nel browser
 
-Cliccando sul nome file apri la popup `File content`.
-
-### Colonna Last download
-Mostra:
-- data ultimo download
-- ora ultimo download
-- `elapsed`, cioè quanto tempo è passato dall'ultimo download
-
-### Colonna Totals
-Mostra 4 celle:
-- `READ`
-- `SENT`
-- `DISC`
-- `UNIQUE`
-
-Significato:
-- `READ`: righe lette dal file
-- `SENT`: righe inviate al sistema esterno
-- `DISC`: righe scartate
-- `UNIQUE`: chip unici letti
-
-Colori:
-- `READ` verde se maggiore di zero
-- `SENT` verde se tutto inviato, giallo se parziale, rosso se zero
-- `DISC` rosso se ci sono scarti
-- `UNIQUE` blu
-
-Interazione:
-- clic su `READ`: apre il dettaglio letture
-- clic su `DISC`: apre il dettaglio scarti
-- clic su `UNIQUE`: apre il dettaglio chip unici
-
-### Colonna Last 10 cycles
-Mostra gli ultimi 10 cicli di lavoro della riga:
-- `DL`: quante righe sono state lette in quel ciclo
-- `OUT`: quante righe sono state inviate in quel ciclo
-
-Colori:
-- `DL` verde se il ciclo ha letto righe
-- `OUT` verde se invio completo
-- `OUT` giallo se invio parziale
-
-Cliccando su una cella apri il dettaglio del singolo ciclo.
-
-## Popup File content
-Mostra il contenuto del file selezionato.
-
-Caratteristiche:
-- sottotitolo con URL o path completo
-- ordine iniziale dal più recente al più vecchio
-- pulsante `Newest/Oldest`
-- campo filtro
-- colonna atleta
-- bottone `Black list` per escludere un codice
-
-Se metti un codice in blacklist:
-- sparisce dalla lista
-- smette di essere conteggiato
-- smette di essere inviato
-
-## Popup Unique
-Mostra i chip unici letti.
-
-Caratteristiche:
-- ordinamento `Newest/Oldest`
-- filtro testuale
-- visualizzazione atleta associato
-
-In `TP View` vedi anche il file di provenienza.
-
-## Popup Discarded
-Mostra le righe lette ma non riconosciute rispetto alla tabella `BIB-CHIP`.
-
-Anche da qui puoi aggiungere un codice alla blacklist.
-
-Quando blacklisti un codice:
-- sparisce dalla popup
-- diminuisce il conteggio `DISC`
-
-## Blacklist
-La blacklist è per-riga.
-
-Questo significa che un codice escluso su un source non viene automaticamente escluso sugli altri source.
-
-La popup `Blacklist` in toolbar permette di:
-- vedere i codici esclusi
-- ripristinarli con `Restore`
-
-## Azioni globali
-Nella tabella puoi eseguire azioni su tutte le righe insieme:
-- `PLAY ALL`
-- `STOP ALL`
-- `REWIND ALL`
-- `DELETE ALL`
-
-Usale quando vuoi governare tutti i source in blocco.
+In `TZERO`:
+- niente `SENT`
+- niente `OUT`
 
 ## TP View
-La pagina `TP View` raggruppa i source per timing point.
+Vista per timing point, a card.
 
-Per ogni timing point vedi:
-- nome timing point
-- lista dei source associati con stato di ogni file
-- box `Totals`
+Ogni card mostra:
+- nome TP
+- ultimi 10 passaggi unici
+- totals aggregati
+- speaker
+- QR
+- grafico del TP
 
-Il box `Totals` mostra:
-- `READ`
-- `SENT`
-- `DISC`
-- `UNIQUE`
+Colore header card:
+- verde: tutti i file running
+- giallo: situazione mista / errore
+- rosso: tutti stoppati
 
-Interazioni:
-- clic su `READ`: popup con tutte le letture aggregate del timing point
-- clic su `UNIQUE`: popup con i chip unici aggregati del timing point
+Funzioni utili:
+- gestione `Visible timing points`
+- ordinamento con frecce
+- QR per la pagina speaker
 
-Le popup hanno:
-- ordinamento `Newest/Oldest`
-- campo filtro
-- in più, nella vista aggregata, il nome del file di provenienza
+## Speaker page
+Pagina pubblica tokenizzata per un timing point.
+
+Caratteristiche:
+- non richiede login se hai il token
+- è la versione full-screen della card TP
+- mostra gli ultimi 10 passaggi unici
+- mostra `Team`
+- in `TZERO` nasconde `SENT`
+
+## Reader View
+Vista a card per reader/device.
+
+Reader configurabili:
+- `name`
+- `location`: `LAN`, `WAN`, `FS`
+- `type`: `ICRON`, `UBIDIUM`, `FEIBOT`
+
+La card mostra:
+- nome reader
+- lista file odierni
+- dimensione file
+- orario file
+- stato collegamento alla gara
+
+Note:
+- testo file verde se il nome file è già collegato alla gara
+- clic sul nome file: apre il contenuto con filtro full text
+- da lì puoi usare `Add to race`
+
+### Scan LAN
+- cerca reader sulla subnet `192.168.x.*`
+- prova `http://<ip>/files`
+- se risponde, censisce automaticamente il reader come `LAN / ICRON`
+
+### Scan WAN
+- trova i reader WAN attivi con file odierno
+- apre una dialog di scelta
+- il censimento non è automatico
+
+### Add to race da reader
+Quando aggiungi un file reader alla gara:
+- `WAN` usa URL file remoto
+- `LAN` usa URL file remoto LAN
+- `FS` usa path locale
+
+In `TZERO`:
+- il file remoto continua a essere letto dalla sua URL
+- lo scheduler ne salva anche una copia aggiornata in `download/`
+- la sorgente resta persistita in `config/sources.json`
+
+## TZero dietro le quinte
+Per ogni gara TZero contano tre aree:
+- `participants.csv`
+- `download/`
+- `config/`
+
+In `config/` trovi:
+- `timingpoints.json`
+- `sources.json`
+
+Quando cancelli un file da `Settings` in `TZERO`:
+- non viene eliminato definitivamente
+- viene spostato in `deleted/`
+- viene rinominato con timestamp
 
 ## RR Live
-La pagina `RR Live` gestisce un altro flusso operativo, basato sulle API live di Race Result.
+Vista separata per il flusso live RR.
 
-Quando entri nella pagina:
-- la sync iniziale carica automaticamente la lista delle API disponibili
-- la tabella viene popolata
-
-Azioni disponibili:
+Azioni:
 - `PLAY`
 - `STOP`
 - `RESET`
 - `DELETE`
-- `Global actions`
 
-`RESET` rimuove la memoria dell'ultimo file spedito. Al successivo `PLAY` il flusso riparte da zero.
+Nota:
+- in `TZERO` questa vista non è disponibile dalla navbar
 
-Anche qui è presente l'area `Messages` richiudibile.
+## Messaggi e log
+Ogni pagina operativa ha la sezione `Messages`.
 
-## Open RR
-Il bottone `Open RR` apre Race Result.
-
-Comportamento:
-- in locale apre la gara locale con `pw=0`
-- in remoto apre l'URL gestito dal backend
-
-## Messaggi
-L'area `Messages` è presente nelle pagine operative.
-
-Serve per monitorare:
+Serve per vedere:
 - download
 - upload
 - errori
-- messaggi di sistema
-- attività scheduler
+- discovery reader
+- stato scheduler
 
-La sezione è richiudibile verso il basso e ricorda lo stato nel browser.
+Log completo:
+- `logs/connector-rr.log`
 
-## Log applicativo
-I log completi sono scritti in:
-- [logs/connector-rr.log](/Users/vitocandela/Documents/Playground/ICRONIUM-RR-Bridge/logs/connector-rr.log)
-
-## Suggerimenti operativi
-### Per iniziare una gara
-1. fai login
-2. seleziona la gara in dashboard
-3. verifica `SYNC`
-4. controlla `BIB-CHIP` e `Timing Points`
-5. aggiungi i source necessari
-6. premi `PLAY`
-7. monitora `Totals`, `Last 10 cycles` e `Messages`
-
-### Se un file dà errore
-1. controlla il path o l'URL
-2. guarda lo stato `ERROR`
-3. verifica i messaggi in basso
-4. usa `STOP` solo se vuoi fermare i tentativi automatici
-
-### Se vuoi ripartire da zero su un source
-1. premi `STOP`
-2. premi `REWIND`
-3. premi di nuovo `PLAY`
-
-### Se vedi troppi scarti
-1. apri `DISC`
-2. controlla i codici non riconosciuti
-3. verifica `BIB-CHIP`
-4. usa la blacklist solo per i codici che vuoi ignorare davvero
+## Suggerimento operativo minimo
+1. scegli modalità login
+2. apri la gara dalla `Race List`
+3. fai `SYNC`
+4. verifica anagrafica e TP
+5. configura file o reader
+6. avvia con `PLAY`
+7. monitora `Totals`, `Last 10 cycles`, grafici e `Messages`

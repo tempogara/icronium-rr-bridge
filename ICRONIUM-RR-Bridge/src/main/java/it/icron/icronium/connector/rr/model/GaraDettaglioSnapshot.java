@@ -9,6 +9,8 @@ public class GaraDettaglioSnapshot {
     private int bibChipCount;
     private int timingPointCount;
     private int scartiCount;
+    private String connectionMode;
+    private String tzeroRootFolder;
     private String rrHost;
     private String rrPw;
     private List<BibChipRow> bibChipRows = new ArrayList<>();
@@ -55,6 +57,22 @@ public class GaraDettaglioSnapshot {
 
     public void setScartiCount(int scartiCount) {
         this.scartiCount = scartiCount;
+    }
+
+    public String getConnectionMode() {
+        return connectionMode;
+    }
+
+    public void setConnectionMode(String connectionMode) {
+        this.connectionMode = connectionMode;
+    }
+
+    public String getTzeroRootFolder() {
+        return tzeroRootFolder;
+    }
+
+    public void setTzeroRootFolder(String tzeroRootFolder) {
+        this.tzeroRootFolder = tzeroRootFolder;
     }
 
     public String getRrHost() {

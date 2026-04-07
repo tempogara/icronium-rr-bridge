@@ -251,10 +251,14 @@ public class ReaderViewService {
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found in reader"));
 
+        String sourceUrl = resolveReaderSourceUrl(reader, fileEntry);
+        String location = safe(reader.getLocation()).trim().toUpperCase();
+        if ("WAN".equals(location) || "LAN".equals(location)) {
+            return sourceUrl.isBlank() ? fileEntry.getPath() : sourceUrl;
+        }
         if (sessionService.isTZeroMode()) {
             return copyReaderFileIntoTZeroDownload(eventId, reader, fileEntry);
         }
-        String sourceUrl = resolveReaderSourceUrl(reader, fileEntry);
         return sourceUrl.isBlank() ? fileEntry.getPath() : sourceUrl;
     }
 

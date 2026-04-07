@@ -347,6 +347,17 @@
       border-color: #99040c;
       color: #ffffff;
     }
+    .nav-view-btn {
+      min-width: 96px;
+    }
+    .nav-view-btn.active {
+      background: #0d6efd;
+      border-color: #0b5ed7;
+      color: #ffffff;
+    }
+    .nav-view-btn.active:hover {
+      color: #ffffff;
+    }
   </style>
 </head>
 <body>
@@ -360,11 +371,12 @@
           <img src="/images/open-rr.png" alt="" style="width:18px;height:18px;border-radius:3px;">
           <span>Open RR</span>
         </button>
-        <button id="btnRrLive" class="btn btn-sm btn-outline-secondary" type="button">RR Live</button>
-        <button id="btnTpView" class="btn btn-sm btn-outline-secondary" type="button">TP View</button>
-        <button id="btnFileView" class="btn btn-sm btn-outline-secondary" type="button">File View</button>
-        <button id="btnReaderView" class="btn btn-sm btn-outline-secondary" type="button">Reader View</button>
-        <button id="backToMenuBtn" class="btn btn-sm btn-outline-primary" type="button">Dashboard</button>
+        <button id="btnRrLive" class="btn btn-sm btn-outline-secondary nav-view-btn" type="button">RR Live</button>
+        <button id="btnTpView" class="btn btn-sm btn-outline-secondary nav-view-btn" type="button">TP View</button>
+        <button id="btnFileView" class="btn btn-sm btn-outline-secondary nav-view-btn" type="button">File View</button>
+        <button id="btnReaderView" class="btn btn-sm btn-outline-secondary nav-view-btn" type="button">Reader View</button>
+        <button id="btnDetailView" class="btn btn-sm nav-view-btn active" type="button">Settings</button>
+        <button id="backToMenuBtn" class="btn btn-sm btn-outline-primary" type="button">Race List</button>
       </div>
     </div>
   </nav>
@@ -988,6 +1000,7 @@
     function applyModeVisibility() {
       const auth = getStoredAuth();
       btnOpenRr.classList.toggle('d-none', !auth || auth.mode === 'TZERO');
+      btnRrLive.classList.toggle('d-none', !auth || auth.mode === 'TZERO');
       btnManageTp.classList.toggle('d-none', !auth || auth.mode !== 'TZERO');
     }
 

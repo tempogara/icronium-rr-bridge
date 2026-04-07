@@ -44,6 +44,17 @@
       border-color: #99040c;
       color: #ffffff;
     }
+    .nav-view-btn {
+      min-width: 96px;
+    }
+    .nav-view-btn.active {
+      background: #0d6efd;
+      border-color: #0b5ed7;
+      color: #ffffff;
+    }
+    .nav-view-btn.active:hover {
+      color: #ffffff;
+    }
     .messages-panel {
       height: 220px;
       border-top: 1px solid #dee2e6;
@@ -147,7 +158,14 @@
       display: grid;
       gap: 3px;
       min-width: 430px;
-      margin-top: 6px;
+    }
+    .cycles-cell {
+      min-width: 470px;
+      white-space: nowrap;
+    }
+    .chart-cell {
+      width: 100%;
+      min-width: 360px;
     }
     .delta-row-wrap {
       display: grid;
@@ -387,11 +405,12 @@
           <img src="/images/open-rr.png" alt="" style="width:18px;height:18px;border-radius:3px;">
           <span>Open RR</span>
         </button>
-        <button id="btnRrLive" class="btn btn-sm btn-outline-secondary" type="button">RR Live</button>
-        <button id="btnTpView" class="btn btn-sm btn-outline-secondary" type="button">TP View</button>
-        <button id="btnReaderView" class="btn btn-sm btn-outline-secondary" type="button">Reader View</button>
-        <button id="btnDetailView" class="btn btn-sm btn-outline-secondary" type="button">Race Detail</button>
-        <button id="backToMenuBtn" class="btn btn-sm btn-outline-primary" type="button">Dashboard</button>
+        <button id="btnRrLive" class="btn btn-sm btn-outline-secondary nav-view-btn" type="button">RR Live</button>
+        <button id="btnTpView" class="btn btn-sm btn-outline-secondary nav-view-btn" type="button">TP View</button>
+        <button id="btnFileView" class="btn btn-sm nav-view-btn active" type="button">File View</button>
+        <button id="btnReaderView" class="btn btn-sm btn-outline-secondary nav-view-btn" type="button">Reader View</button>
+        <button id="btnDetailView" class="btn btn-sm btn-outline-secondary nav-view-btn" type="button">Settings</button>
+        <button id="backToMenuBtn" class="btn btn-sm btn-outline-primary" type="button">Race List</button>
       </div>
     </div>
   </nav>
@@ -429,7 +448,8 @@
               <tr>
                 <th style="width: 320px;">File</th>
                 <th style="width: 1%;">Totals</th>
-                <th>Minute chart</th>
+                <th class="cycles-cell">Last 10 cycles</th>
+                <th class="chart-cell">Minute chart</th>
               </tr>
             </thead>
             <tbody id="tpViewBody"></tbody>
@@ -657,6 +677,7 @@
     function applyModeVisibility() {
       const auth = getStoredAuth();
       btnOpenRr.classList.toggle('d-none', !auth || auth.mode === 'TZERO');
+      btnRrLive.classList.toggle('d-none', !auth || auth.mode === 'TZERO');
     }
 
     function isTZeroSession() {
@@ -1339,7 +1360,7 @@
         <button type="button" class="${discardedClass}" disabled>${discarded}</button>
         <span class="${uniqueClass}"><button type="button" class="totals-value-btn show-tp-unique-btn">${unique}</button></span>
       </div>`;
-      return `${totalsHtml}${renderLastCycles(row)}`;
+      return totalsHtml;
     }
 
     function renderLastCycles(row) {
@@ -1385,6 +1406,10 @@
         <div class="delta-row-wrap"><span class="delta-label">DL</span><div class="delta-grid">${downloadHtml}</div></div>
         <div class="delta-row-wrap"><span class="delta-label">OUT</span><div class="delta-grid">${sentHtml}</div></div>
       </div>`;
+    }
+
+    function renderChartCell(row, batchSignature) {
+      return `<div class="minute-chart-wrap" data-chart-key="${escapeHtml(row.rowId)}" data-chart-batch="${escapeHtml(batchSignature)}"><div class="minute-chart-loading">Loading minute chart...</div></div>`;
     }
 
     function countUniqueChips(row) {
@@ -1455,7 +1480,8 @@
         tr.innerHTML = `
           <td>${renderFileCell(row, index, entries.length)}</td>
           <td>${renderTotals(row)}</td>
-          <td><div class="minute-chart-wrap" data-chart-key="${escapeHtml(row.rowId)}" data-chart-batch="${escapeHtml(batchSignature)}"><div class="minute-chart-loading">Loading minute chart...</div></div></td>
+          <td class="cycles-cell">${renderLastCycles(row)}</td>
+          <td class="chart-cell">${renderChartCell(row, batchSignature)}</td>
         `;
         bindRowInteractions(tr, row, index, entries.length);
         tpViewBody.appendChild(tr);
@@ -1527,6 +1553,8 @@
       }
       tr.children[0].innerHTML = renderFileCell(updatedRow, index, entries.length);
       tr.children[1].innerHTML = renderTotals(updatedRow);
+      tr.children[2].innerHTML = renderLastCycles(updatedRow);
+      tr.children[3].innerHTML = renderChartCell(updatedRow, buildBatchSignature(entries));
       bindRowInteractions(tr, updatedRow, index, entries.length);
     }
 

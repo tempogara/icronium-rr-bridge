@@ -22,7 +22,7 @@
     <div class="hero">
       <h1>Manuale Tecnico</h1>
       <p>Riferimento tecnico per setup, runtime, persistenza, endpoint e struttura dell'applicazione.</p>
-      <p><a href="./manuale-utente.html">Apri manuale utente HTML</a> · <a href="../README.md">Apri README.md</a></p>
+      <p><a href="./manuale-utente.html">Apri manuale utente HTML</a> · <a href="../README.md">Apri README tecnico</a></p>
     </div>
 
     <div class="card">
@@ -31,48 +31,32 @@
         <li>Java <code>21</code></li>
         <li>Spring Boot <code>3.3.5</code></li>
         <li>Gradle Wrapper</li>
-        <li>HTML + Bootstrap + STOMP/WebSocket</li>
+        <li>HTML + Bootstrap + WebSocket</li>
         <li>Persistenza JSON su disco</li>
       </ul>
     </div>
 
     <div class="card">
-      <h2>Avvio</h2>
-      <p>Dalla root del progetto:</p>
-      <p><code>./gradlew bootRun</code></p>
-      <p>URL: <a href="http://localhost:8087">http://localhost:8087</a></p>
-    </div>
-
-    <div class="card">
-      <h2>Configurazione runtime</h2>
+      <h2>Modalità</h2>
       <ul>
-        <li>Porta HTTP: <code>8087</code></li>
-        <li>Timeout sessione: <code>12h</code></li>
-        <li>Log file: <code>logs/connector-rr.log</code></li>
+        <li><code>RR</code></li>
+        <li><code>RR_LOCALE</code></li>
+        <li><code>TZERO</code></li>
       </ul>
-      <p>File: <code>src/main/resources/application.properties</code></p>
+      <p>In <code>TZERO</code> la root gara è persistita in <code>data/tzero/config.json</code>.</p>
     </div>
 
     <div class="card">
       <h2>Pagine</h2>
       <ul>
-        <li><code>/index.html</code></li>
         <li><code>/dashboard.html</code></li>
-        <li><code>/gara-dettaglio.html?eventId=&lt;RRID&gt;</code></li>
-        <li><code>/timingpointView.html?eventId=&lt;RRID&gt;</code></li>
-        <li><code>/rr-live.html?eventId=&lt;RRID&gt;</code></li>
+        <li><code>/gara-dettaglio.html</code> (<code>Settings</code>)</li>
+        <li><code>/timingpointView.html</code></li>
+        <li><code>/fileView.html</code></li>
+        <li><code>/readerView.html</code></li>
+        <li><code>/rr-live.html</code></li>
+        <li><code>/speaker-tp.html?token=...</code></li>
       </ul>
-    </div>
-
-    <div class="card">
-      <h2>Sessione e WebSocket</h2>
-      <ul>
-        <li>Auth REST: <code>/api/auth/*</code></li>
-        <li>Keepalive: <code>GET /api/auth/keepalive</code></li>
-        <li>Handshake WS: <code>/ws</code></li>
-        <li>Topic: <code>/topic/messages</code>, <code>/topic/gare-updates</code>, <code>/topic/rr-live-messages</code>, <code>/topic/rr-live-updates</code></li>
-      </ul>
-      <p>La sessione RR è gestita lato backend. Il frontend non conserva il <code>pw</code> RR.</p>
     </div>
 
     <div class="card">
@@ -80,53 +64,40 @@
       <ul>
         <li><code>data/gara-dettaglio/&lt;eventId&gt;.json</code></li>
         <li><code>data/rr-live/&lt;eventId&gt;.json</code></li>
+        <li><code>data/reader-view/&lt;eventId&gt;.json</code></li>
+        <li><code>data/speaker-tokens.json</code></li>
+        <li><code>data/tzero/config.json</code></li>
       </ul>
-      <p>I dati persistiti includono configurazione righe, stati, contatori, blacklist e storici recenti.</p>
+      <p>Per le gare TZero esistono anche:</p>
+      <ul>
+        <li><code>&lt;gara&gt;/config/timingpoints.json</code></li>
+        <li><code>&lt;gara&gt;/config/sources.json</code></li>
+      </ul>
     </div>
 
     <div class="card">
       <h2>Scheduler</h2>
-      <p><strong>Race Detail</strong></p>
       <ul>
-        <li>partenza su <code>PLAY</code></li>
-        <li>primo download immediato</li>
-        <li>polling regolato da <code>Download every</code></li>
-        <li>lettura incrementale file</li>
-        <li>righe con <code>*</code> scartate in ingresso</li>
-        <li>post batch massimo <code>300</code></li>
-        <li>in caso di errore post il contatore non avanza</li>
-      </ul>
-      <p><strong>RR Live</strong></p>
-      <ul>
-        <li>sync API RR Live per evento</li>
-        <li>polling per riga</li>
-        <li><code>RESET</code> azzera la memoria dell'ultimo file inviato</li>
+        <li>Race Detail: polling file e post RR</li>
+        <li>TZero: post simulato per calcolo discarded</li>
+        <li>Reader View: scan periodico file odierni per reader</li>
+        <li>Mirror TZero: le sorgenti remote vengono copiate anche in <code>download/</code></li>
       </ul>
     </div>
 
     <div class="card">
-      <h2>API principali</h2>
+      <h2>Reader View</h2>
       <ul>
-        <li><code>POST /api/auth/login</code></li>
-        <li><code>POST /api/auth/login-local</code></li>
-        <li><code>GET /api/gare</code></li>
-        <li><code>POST /api/gare/{eventId}/sync</code></li>
-        <li><code>GET /api/gare/{eventId}/rows</code></li>
-        <li><code>POST /api/gare/{eventId}/rows/{rowId}/actions/{action}</code></li>
-        <li><code>POST /api/rr-live/sync</code></li>
-        <li><code>GET /api/rr-live/state/{eventId}</code></li>
+        <li>reader types: <code>ICRON</code>, <code>UBIDIUM</code>, <code>FEIBOT</code></li>
+        <li>location: <code>LAN</code>, <code>WAN</code>, <code>FS</code></li>
+        <li><code>Scan LAN</code>: discovery su <code>192.168.x.*</code> via <code>/files</code></li>
+        <li><code>Scan WAN</code>: discovery manuale reader attivi via endpoint web</li>
       </ul>
-      <p>Il dettaglio completo è nel <a href="../README.md">README tecnico</a>.</p>
     </div>
 
     <div class="card">
-      <h2>Log e troubleshooting</h2>
-      <ul>
-        <li>log applicativo: <code>logs/connector-rr.log</code></li>
-        <li>porta applicazione: <code>8087</code></li>
-        <li>se il browser mostra errori websocket, verifica <code>/ws</code> e la porta attiva</li>
-        <li>se la sessione scade, verifica il keepalive e lo stato auth</li>
-      </ul>
+      <h2>Speaker</h2>
+      <p>La pagina speaker usa un token persistito lato backend. Il frontend genera QR ma il link pubblico viene prodotto dal backend con IP LAN <code>192.168.*</code> quando disponibile.</p>
     </div>
   </div>
 </body>
