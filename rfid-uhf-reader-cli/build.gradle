@@ -1,0 +1,40 @@
+plugins {
+    id 'application'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation files(
+            'libs/jSerialComm-2.9.1.jar',
+            'libs/lib_connect.jar',
+            'libs/lib_reader.jar'
+    )
+}
+
+application {
+    mainClass = 'it.icron.rfid.UhfReaderApp'
+}
+
+tasks.named('run') {
+    standardInput = System.in
+}
+
+tasks.register('runReader', JavaExec) {
+    group = 'application'
+    description = 'Avvia il reader RFID TCP passando gli argomenti con --args="..."'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = application.mainClass
+    standardInput = System.in
+    if (project.hasProperty('args')) {
+        args project.property('args').toString().split(/\s+/).findAll { !it.isBlank() }
+    }
+}

@@ -1,0 +1,9 @@
+out/
+build/
+/.gradle/
+.gradle-user-home/
+bin/
+.classpath
+.project
+.settings/
+**/.DS_Store
